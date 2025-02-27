@@ -60,6 +60,7 @@ model User {
   shifts        Shift[]
   goals         UserGoal[]
   fixedExpenses FixedExpense[]
+  weeklyPeriods WeeklyPeriod[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -80,6 +81,23 @@ model Vehicle {
   updatedAt DateTime @updatedAt
 }
 
+model WeeklyPeriod {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  name      String
+  startDate DateTime // Data de início (segunda-feira)
+  endDate   DateTime // Data de fim (domingo)
+  isActive  Boolean  @default(true)
+
+  shifts Shift[] // Turnos dentro deste período semanal
+
+  // Metadados
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Shift {
   id     String @id @default(uuid())
   userId String
@@ -95,6 +113,11 @@ model Shift {
 
   startMileage Float // Quilometragem inicial
   endMileage   Float? // Quilometragem final (opcional)
+
+  weeklyPeriodId String?
+  weeklyPeriod   WeeklyPeriod? @relation(fields: [weeklyPeriodId], references: [id])
+
+  extendedEndTime DateTime? // Para registrar horários que passam da meia-noite
 
   // Relações com outras entidades
   expenses ShiftExpense[] // Despesas do turno
@@ -116,6 +139,8 @@ model ShiftIncome {
   // Campos opcionais para detalhamento
   tripCount   Int? // Número de viagens
   description String? // Descrição adicional
+
+  isExtendedHour Boolean @default(false)
 
   // Metadados
   createdAt DateTime @default(now())

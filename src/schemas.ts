@@ -8,6 +8,35 @@ export const vehicleSchema = z.object({
 	fuelType: z.nativeEnum(FuelType),
 });
 
+// Schema para período semanal
+export const weeklyPeriodSchema = z
+	.object({
+		name: z.string().optional(),
+		startDate: z.date(),
+		endDate: z.date(),
+		isActive: z.boolean().default(true),
+	})
+	.refine(
+		(data) => {
+			// Verifica se a data de início é uma segunda-feira
+			return new Date(data.startDate).getDay() === 1;
+		},
+		{
+			message: "O período deve começar em uma segunda-feira",
+			path: ["startDate"],
+		},
+	)
+	.refine(
+		(data) => {
+			// Verifica se a data de fim é um domingo
+			return new Date(data.endDate).getDay() === 0;
+		},
+		{
+			message: "O período deve terminar em um domingo",
+			path: ["endDate"],
+		},
+	);
+
 // Schema para iniciar um turno
 export const startShiftSchema = z.object({
 	vehicleId: z.string().uuid("ID do veículo inválido"),
@@ -44,6 +73,7 @@ export const shiftIncomeSchema = z.object({
 	amount: z.number().positive("Valor deve ser positivo"),
 	tripCount: z.number().int().nonnegative().optional(),
 	description: z.string().optional(),
+	isExtendedHour: z.boolean().default(false),
 });
 
 // Schema para objetivos do usuário
@@ -58,12 +88,7 @@ export const userGoalSchema = z.object({
 export const fixedExpenseSchema = z.object({
 	name: z.string().min(1, "Nome da despesa é obrigatório"),
 	amount: z.number().positive("Valor deve ser positivo"),
-	frequency: z.enum([
-		ExpenseFrequency.DAILY,
-		ExpenseFrequency.WEEKLY,
-		ExpenseFrequency.MONTHLY,
-		ExpenseFrequency.YEARLY,
-	]),
+	frequency: z.nativeEnum(ExpenseFrequency),
 	dueDay: z.number().int().min(1).max(31).optional(),
 });
 
@@ -75,3 +100,4 @@ export type ShiftExpenseFormData = z.infer<typeof shiftExpenseSchema>;
 export type ShiftIncomeFormData = z.infer<typeof shiftIncomeSchema>;
 export type UserGoalFormData = z.infer<typeof userGoalSchema>;
 export type FixedExpenseFormData = z.infer<typeof fixedExpenseSchema>;
+export type WeeklyPeriodFormData = z.infer<typeof weeklyPeriodSchema>;

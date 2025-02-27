@@ -5,6 +5,8 @@ import { Toaster } from "sonner";
 import "./globals.css";
 
 import { Header } from "@/components/header";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ClerkProvider, SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
@@ -29,13 +31,17 @@ export default async function RootLayout({
 }: Readonly<{
 	children: React.ReactNode;
 }>) {
+	const user = await checkUser();
 	return (
 		<ClerkProvider>
-			<html lang="en">
-				<body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-					<Header />
-					<Toaster />
+			<html lang="pt">
+				<body className={cn(geistSans.className, geistMono.className)}>
+					{/* <SignedIn> */}
+					{/* Conteúdo mostrado apenas para usuários autenticados */}
 					{children}
+					{/* </SignedIn> */}
+
+					<Toaster />
 				</body>
 			</html>
 		</ClerkProvider>
