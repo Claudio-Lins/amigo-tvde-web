@@ -12,12 +12,11 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { vehicleMakes } from "@/constant/vehicle-data";
 import { VehicleFormData, vehicleSchema } from "@/schemas";
-import useStore from "@/stores/use-store";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { FuelType, User } from "@prisma/client";
+import type { FuelType } from "@prisma/client";
 import { Car, PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -25,20 +24,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
-export function AddVehicleForm() {
-	const [user, setUser] = useState<User | null>(null);
+interface AddVehicleFormProps {
+	onSuccess?: () => void; // Callback para quando um veículo é adicionado
+}
+export function AddVehicleForm({ onSuccess }: AddVehicleFormProps) {
 	const [selectedMake, setSelectedMake] = useState<string>("");
 	const [isOpenModal, setIsOpenModal] = useState(false);
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	const router = useRouter();
-	useEffect(() => {
-		const fetchUser = async () => {
-			const response = await fetch("/api/user");
-			const data = await response.json();
-			setUser(data);
-		};
-
-		fetchUser();
-	}, []);
 
 	const form = useForm<VehicleFormData>({
 		resolver: zodResolver(vehicleSchema),
@@ -50,24 +43,29 @@ export function AddVehicleForm() {
 		},
 	});
 
-	const years = Array.from({ length: new Date().getFullYear() - 2018 }, (_, i) => new Date().getFullYear() - i);
+	const years = Array.from({ length: new Date().getFullYear() - 2018 + 1 }, (_, i) => new Date().getFullYear() - i);
 
-	const { addVehicle: addVehicleToStore } = useStore();
-
+	/**
+	 * Função para enviar o formulário
+	 * @param data Dados do formulário validados pelo Zod
+	 */
 	async function onSubmit(data: VehicleFormData) {
 		try {
-			const newVehicle = await addVehicle(data);
-			console.log("New Vehicle:", newVehicle);
-			addVehicleToStore(newVehicle);
-			console.log(JSON.stringify(newVehicle, null, 2));
-			router.push("/dashboard");
+			const result = await addVehicle(data);
+
+			if (!result || "error" in result) {
+				toast.error(typeof result?.error === "string" ? result.error : "Erro ao adicionar veículo");
+				return;
+			}
 
 			toast.success("Veículo adicionado com sucesso!");
 			form.reset();
 			setIsOpenModal(false);
+			router.refresh();
+			onSuccess?.();
 		} catch (error) {
 			toast.error("Erro ao adicionar veículo");
-			console.error("Erro ao adicionar veículo:", error instanceof Error ? error.message : "Erro desconhecido");
+			console.error("Erro ao adicionar veículo:", error);
 		}
 	}
 
@@ -75,21 +73,17 @@ export function AddVehicleForm() {
 		<Dialog open={isOpenModal} onOpenChange={setIsOpenModal}>
 			<DialogTrigger asChild>
 				<Button variant="outline" className="gap-2">
-					<PlusIcon className="size-8" />
-					<Car className="size-8" />
+					<PlusIcon className="h-4 w-4" />
+					<span>Adicionar Veículo</span>
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-lg mx-auto bg-amber-300">
+			<DialogContent className="max-w-lg">
 				<DialogHeader>
-					<DialogTitle>{}</DialogTitle>
-					<DialogDescription>{}</DialogDescription>
+					<DialogTitle>Adicionar Veículo</DialogTitle>
+					<DialogDescription>Preencha os dados do seu veículo para começar a registrar seus turnos.</DialogDescription>
 				</DialogHeader>
-				<Card className="w-full">
-					<CardHeader>
-						<CardTitle className="text-2xl font-bold">Adicionar Veículo</CardTitle>
-						<CardDescription>Preencha os dados do seu veículo</CardDescription>
-					</CardHeader>
-					<CardContent>
+				<Card className="w-full border-0 shadow-none">
+					<CardContent className="p-0">
 						<Form {...form}>
 							<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 								<FormField
@@ -103,6 +97,8 @@ export function AddVehicleForm() {
 													onValueChange={(value) => {
 														field.onChange(value);
 														setSelectedMake(value);
+														// Resetando o modelo quando a marca muda
+														form.setValue("model", "");
 													}}
 													value={field.value}
 												>
@@ -132,22 +128,23 @@ export function AddVehicleForm() {
 										<FormItem>
 											<FormLabel>Modelo</FormLabel>
 											<FormControl>
-												{/* <Input placeholder="Ex: Corolla" {...field} />
-												 */}
-												<Select onValueChange={field.onChange} value={field.value}>
+												<Select onValueChange={field.onChange} value={field.value} disabled={!selectedMake}>
 													<FormControl>
 														<SelectTrigger>
-															<SelectValue placeholder="Selecione o modelo" />
+															<SelectValue
+																placeholder={selectedMake ? "Selecione o modelo" : "Selecione uma marca primeiro"}
+															/>
 														</SelectTrigger>
 													</FormControl>
 													<SelectContent>
-														{vehicleMakes
-															.find((make) => make.make === selectedMake)
-															?.models.map((model) => (
-																<SelectItem key={model} value={model}>
-																	{model}
-																</SelectItem>
-															))}
+														{selectedMake &&
+															vehicleMakes
+																.find((make) => make.make === selectedMake)
+																?.models.map((model) => (
+																	<SelectItem key={model} value={model}>
+																		{model}
+																	</SelectItem>
+																))}
 													</SelectContent>
 												</Select>
 											</FormControl>
@@ -164,29 +161,23 @@ export function AddVehicleForm() {
 											<FormLabel>Ano</FormLabel>
 											<FormControl>
 												<RadioGroup
-													onValueChange={(value) => {
-														field.onChange(Number(value));
-													}}
-													className="flex flex-wrap justify-center gap-2"
-													defaultValue={new Date().getFullYear().toString()}
-													value={field.value.toString()}
+													onValueChange={(value) => field.onChange(Number(value))}
+													className="flex flex-wrap gap-2"
+													value={String(field.value)}
 												>
 													{years.map((year) => (
 														<FormItem
-															className="flex flex-col justify-center items-center p-2 rounded-md border-2 border-gray-200 hover:bg-gray-100 cursor-pointer size-14"
 															key={year}
+															className="flex items-center space-x-2 rounded-md border p-2 cursor-pointer hover:bg-muted"
 														>
 															<FormControl>
 																<RadioGroupItem value={year.toString()} />
 															</FormControl>
-															<FormLabel className="font-normal">{year}</FormLabel>
+															<FormLabel className="font-normal cursor-pointer">{year}</FormLabel>
 														</FormItem>
 													))}
 												</RadioGroup>
 											</FormControl>
-											<FormDescription>
-												Ano entre {new Date().getFullYear() - 7} e {new Date().getFullYear()}
-											</FormDescription>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -198,7 +189,7 @@ export function AddVehicleForm() {
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Combustível</FormLabel>
-											<Select onValueChange={field.onChange} value={field.value}>
+											<Select onValueChange={field.onChange} value={field.value || "DIESEL"}>
 												<FormControl>
 													<SelectTrigger>
 														<SelectValue placeholder="Selecione o combustível" />
@@ -216,9 +207,14 @@ export function AddVehicleForm() {
 									)}
 								/>
 
-								<Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-									{form.formState.isSubmitting ? "Adicionando..." : "Adicionar Veículo"}
-								</Button>
+								<div className="flex justify-end space-x-2 pt-4">
+									<Button type="button" variant="outline" onClick={() => setIsOpenModal(false)}>
+										Cancelar
+									</Button>
+									<Button type="submit" disabled={isSubmitting || form.formState.isSubmitting}>
+										{isSubmitting || form.formState.isSubmitting ? "Adicionando..." : "Adicionar Veículo"}
+									</Button>
+								</div>
 							</form>
 						</Form>
 					</CardContent>

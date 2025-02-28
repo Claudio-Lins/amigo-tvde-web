@@ -16,6 +16,8 @@ function Navigation({ onClick }: { onClick?: () => void }) {
 		{ href: "/dashboard/daily-entries", icon: "📝", label: "Entradas Diárias" },
 		{ href: "/dashboard/vehicles", icon: "🚗", label: "Veículos" },
 		{ href: "/dashboard/reports", icon: "📈", label: "Relatórios" },
+		{ href: "/dashboard/shifts/new", icon: "⏰", label: "Turnos" },
+		{ href: "/dashboard/settings", icon: "⚙️", label: "Configurações" },
 	];
 
 	return (

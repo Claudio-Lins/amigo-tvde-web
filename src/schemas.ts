@@ -6,6 +6,7 @@ export const vehicleSchema = z.object({
 	model: z.string().min(1, "Modelo é obrigatório"),
 	year: z.number().min(new Date().getFullYear() - 7, "Ano inválido"),
 	fuelType: z.nativeEnum(FuelType),
+	isDefault: z.boolean().default(false),
 });
 
 // Schema para período semanal
