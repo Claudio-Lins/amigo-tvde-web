@@ -1,23 +1,12 @@
 "use client";
 
+import { getWeeklyPeriods } from "@/actions/weekly-period-actions";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { eachDayOfInterval, endOfWeek, format, parseISO, startOfWeek, subDays } from "date-fns";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format, isAfter, isBefore, isWithinInterval, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-	ArrowDownRight,
-	ArrowRight,
-	ArrowUpRight,
-	Calendar,
-	Car,
-	Clock,
-	DollarSign,
-	Fuel,
-	Plus,
-	TrendingUp,
-	Zap,
-} from "lucide-react";
+import { ArrowRight, Calendar, DollarSign, LineChart, Plus, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -26,425 +15,428 @@ import {
 	Bar,
 	BarChart,
 	CartesianGrid,
-	Cell,
 	Legend,
 	Line,
-	LineChart,
-	Pie,
-	PieChart,
 	ResponsiveContainer,
 	Tooltip,
 	XAxis,
 	YAxis,
 } from "recharts";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
-	const [period, setPeriod] = useState("week");
 	const [isLoading, setIsLoading] = useState(true);
-	const [dashboardData, setDashboardData] = useState<any>(null);
+	const [weeklyPeriods, setWeeklyPeriods] = useState<any[]>([]);
+	const [stats, setStats] = useState({
+		totalEarnings: 0,
+		totalExpenses: 0,
+		netEarnings: 0,
+		totalShifts: 0,
+		totalWeeklyPeriods: 0,
+		averageWeeklyEarnings: 0,
+		currentWeekEarnings: 0,
+		previousWeekEarnings: 0,
+		weeklyTrend: 0,
+	});
 
 	useEffect(() => {
-		// Simular carregamento de dados
-		setIsLoading(true);
+		async function loadData() {
+			try {
+				const result = await getWeeklyPeriods();
 
-		setTimeout(() => {
-			// Gerar dados de exemplo
-			const today = new Date();
-			const startDate = startOfWeek(today, { weekStartsOn: 1 });
-			const endDate = endOfWeek(today, { weekStartsOn: 1 });
+				if (result && !("error" in result)) {
+					setWeeklyPeriods(result);
+					calculateStats(result);
+				} else {
+					toast.error(result?.error || "Erro ao carregar períodos semanais");
+				}
+			} catch (error) {
+				console.error("Erro ao carregar dados:", error);
+				toast.error("Erro ao carregar dados do dashboard");
+			} finally {
+				setIsLoading(false);
+			}
+		}
 
-			const dailyEntries = eachDayOfInterval({ start: startDate, end: endDate }).map((date) => {
-				const dateStr = format(date, "yyyy-MM-dd");
-				const dayOfWeek = format(date, "EEE", { locale: ptBR });
-
-				// Valores aleatórios para simular dados
-				const distance = Math.floor(Math.random() * 100) + 50; // 50-150 km
-				const fuelCost = Math.floor(Math.random() * 20) + 10; // 10-30 euros
-				const uberEarnings = Math.floor(Math.random() * 60) + 40; // 40-100 euros
-				const boltEarnings = Math.floor(Math.random() * 40) + 20; // 20-60 euros
-				const totalEarnings = uberEarnings + boltEarnings;
-				const netEarnings = totalEarnings - fuelCost;
-				const costPerKm = fuelCost / distance;
-				const fuelConsumption = Math.random() * 5 + 15; // 15-20 kWh/100km
-
-				return {
-					id: `entry-${dateStr}`,
-					date: dateStr,
-					dayOfWeek,
-					distance,
-					fuelCost,
-					uberEarnings,
-					boltEarnings,
-					totalEarnings,
-					netEarnings,
-					costPerKm,
-					fuelConsumption,
-				};
-			});
-
-			// Calcular totais e médias
-			const totalDistance = dailyEntries.reduce((sum, entry) => sum + entry.distance, 0);
-			const totalFuelCost = dailyEntries.reduce((sum, entry) => sum + entry.fuelCost, 0);
-			const totalEarnings = dailyEntries.reduce((sum, entry) => sum + entry.totalEarnings, 0);
-			const totalNetEarnings = dailyEntries.reduce((sum, entry) => sum + entry.netEarnings, 0);
-			const avgCostPerKm = totalFuelCost / totalDistance;
-			const avgFuelConsumption =
-				dailyEntries.reduce((sum, entry) => sum + entry.fuelConsumption, 0) / dailyEntries.length;
-
-			// Dados de comparação com a semana anterior
-			const prevWeekDistance = totalDistance * 0.9; // Simular 10% menos na semana anterior
-			const prevWeekEarnings = totalEarnings * 0.85; // Simular 15% menos na semana anterior
-			const prevWeekCosts = totalFuelCost * 0.95; // Simular 5% menos na semana anterior
-
-			// Calcular variações percentuais
-			const distanceChange = ((totalDistance - prevWeekDistance) / prevWeekDistance) * 100;
-			const earningsChange = ((totalEarnings - prevWeekEarnings) / prevWeekEarnings) * 100;
-			const costsChange = ((totalFuelCost - prevWeekCosts) / prevWeekCosts) * 100;
-
-			// Dados para o gráfico de pizza de fontes de ganhos
-			const earningsSourceData = [
-				{ id: "uber", name: "Uber", value: dailyEntries.reduce((sum, entry) => sum + entry.uberEarnings, 0) },
-				{ id: "bolt", name: "Bolt", value: dailyEntries.reduce((sum, entry) => sum + entry.boltEarnings, 0) },
-			];
-
-			// Dados para o gráfico de barras de distância por dia
-			const distanceData = dailyEntries.map((entry) => ({
-				day: entry.dayOfWeek,
-				distance: entry.distance,
-			}));
-
-			// Dados para o gráfico de linha de ganhos por dia
-			const earningsData = dailyEntries.map((entry) => ({
-				day: entry.dayOfWeek,
-				earnings: entry.totalEarnings,
-				costs: entry.fuelCost,
-				net: entry.netEarnings,
-			}));
-
-			// Dados para o gráfico de eficiência
-			const efficiencyData = dailyEntries.map((entry) => ({
-				day: entry.dayOfWeek,
-				costPerKm: entry.costPerKm,
-				consumption: entry.fuelConsumption,
-			}));
-
-			// Últimas entradas
-			const recentEntries = [...dailyEntries]
-				.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-				.slice(0, 5);
-
-			// Definir os dados do dashboard
-			setDashboardData({
-				dailyEntries,
-				recentEntries,
-				totals: {
-					distance: totalDistance,
-					fuelCost: totalFuelCost,
-					earnings: totalEarnings,
-					netEarnings: totalNetEarnings,
-				},
-				averages: {
-					costPerKm: avgCostPerKm,
-					fuelConsumption: avgFuelConsumption,
-				},
-				changes: {
-					distance: distanceChange,
-					earnings: earningsChange,
-					costs: costsChange,
-				},
-				charts: {
-					earningsSource: earningsSourceData,
-					distance: distanceData,
-					earnings: earningsData,
-					efficiency: efficiencyData,
-				},
-			});
-
-			setIsLoading(false);
-		}, 1000);
+		loadData();
 	}, []);
+
+	function calculateStats(periods: any[]) {
+		// Ordenar períodos por data (mais recente primeiro)
+		const sortedPeriods = [...periods].sort((a, b) => {
+			return new Date(b.endDate).getTime() - new Date(a.endDate).getTime();
+		});
+
+		// Usar os dois períodos mais recentes em vez de tentar encontrar o "atual" e o "anterior"
+		const mostRecentPeriod = sortedPeriods[0] || null;
+		const secondMostRecentPeriod = sortedPeriods[1] || null;
+
+		// Calcular estatísticas gerais
+		const totalEarnings = periods.reduce((sum, period) => {
+			const periodEarnings = (period.Shift || []).reduce(
+				(shiftSum: number, shift: any) =>
+					shiftSum + shift.uberEarnings + shift.boltEarnings + (shift.otherEarnings || 0),
+				0,
+			);
+			return sum + periodEarnings;
+		}, 0);
+
+		const totalExpenses = periods.reduce((sum, period) => {
+			const periodExpenses = (period.Expense || []).reduce(
+				(expenseSum: number, expense: any) => expenseSum + expense.amount,
+				0,
+			);
+			return sum + periodExpenses;
+		}, 0);
+
+		const netEarnings = totalEarnings - totalExpenses;
+
+		const totalShifts = periods.reduce((sum, period) => sum + (period.Shift?.length || 0), 0);
+
+		// Calcular média semanal
+		const averageWeeklyEarnings = periods.length > 0 ? netEarnings / periods.length : 0;
+
+		// Calcular ganhos da semana atual e anterior
+		const currentWeekEarnings = calculatePeriodNetEarnings(mostRecentPeriod);
+		const previousWeekEarnings = calculatePeriodNetEarnings(secondMostRecentPeriod);
+
+		// Calcular tendência semanal (% de mudança)
+		let weeklyTrend = 0;
+
+		if (previousWeekEarnings > 0) {
+			weeklyTrend = ((currentWeekEarnings - previousWeekEarnings) / previousWeekEarnings) * 100;
+		} else if (previousWeekEarnings === 0 && currentWeekEarnings > 0) {
+			weeklyTrend = 100; // Aumento de 100% quando passamos de 0 para algum valor positivo
+		} else if (previousWeekEarnings === 0 && currentWeekEarnings === 0) {
+			weeklyTrend = 0; // Sem mudança quando ambos são zero
+		}
+
+		// Limitar valores extremos para melhor visualização
+		if (weeklyTrend < -100) weeklyTrend = -100;
+		if (weeklyTrend > 1000) weeklyTrend = 1000;
+
+		setStats({
+			totalEarnings,
+			totalExpenses,
+			netEarnings,
+			totalShifts,
+			totalWeeklyPeriods: periods.length,
+			averageWeeklyEarnings,
+			currentWeekEarnings,
+			previousWeekEarnings,
+			weeklyTrend,
+		});
+	}
+
+	function calculatePeriodNetEarnings(period: any) {
+		if (!period) return 0;
+
+		const periodEarnings = (period.Shift || []).reduce(
+			(sum: number, shift: any) => sum + shift.uberEarnings + shift.boltEarnings + (shift.otherEarnings || 0),
+			0,
+		);
+
+		const periodExpenses = (period.Expense || []).reduce((sum: number, expense: any) => sum + expense.amount, 0);
+
+		return periodEarnings - periodExpenses;
+	}
+
+	// Preparar dados para o gráfico de tendência semanal
+	const weeklyTrendData = weeklyPeriods
+		.map((period) => {
+			const netEarnings = calculatePeriodNetEarnings(period);
+			return {
+				name: format(new Date(period.startDate), "dd/MM", { locale: ptBR }),
+				earnings: netEarnings,
+			};
+		})
+		.sort((a, b) => {
+			const dateA = new Date(a.name.split("/").reverse().join("/"));
+			const dateB = new Date(b.name.split("/").reverse().join("/"));
+			return dateA.getTime() - dateB.getTime();
+		})
+		.slice(-8); // Mostrar apenas as últimas 8 semanas
+
+	// Preparar dados para o gráfico de distribuição de ganhos vs despesas
+	const lastThreeMonthsPeriods = weeklyPeriods.filter((period) =>
+		isAfter(new Date(period.endDate), subMonths(new Date(), 3)),
+	);
+
+	const earningsVsExpensesData = lastThreeMonthsPeriods
+		.map((period) => {
+			const earnings = (period.Shift || []).reduce(
+				(sum: number, shift: any) => sum + shift.uberEarnings + shift.boltEarnings + (shift.otherEarnings || 0),
+				0,
+			);
+
+			const expenses = (period.Expense || []).reduce((sum: number, expense: any) => sum + expense.amount, 0);
+
+			return {
+				name: format(new Date(period.startDate), "dd/MM", { locale: ptBR }),
+				ganhos: earnings,
+				despesas: expenses,
+				liquido: earnings - expenses,
+			};
+		})
+		.sort((a, b) => {
+			const dateA = new Date(a.name.split("/").reverse().join("/"));
+			const dateB = new Date(b.name.split("/").reverse().join("/"));
+			return dateA.getTime() - dateB.getTime();
+		});
+
+	// Formatar valores monetários
+	function formatCurrency(value: number): string {
+		return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
+	}
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center h-[calc(100vh-200px)]">
-				<div className="text-center">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-					<p className="mt-4 text-muted-foreground">Carregando dados do dashboard...</p>
+			<div className="container py-6 md:py-0 space-y-6">
+				<div className="flex items-center justify-between">
+					<h1 className="text-2xl font-bold">Dashboard</h1>
+					<Skeleton className="h-10 w-40" />
+				</div>
+
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+					{Array.from({ length: 4 }).map((_, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
+						<Skeleton key={i} className="h-32" />
+					))}
+				</div>
+
+				<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<Skeleton className="h-80" />
+					<Skeleton className="h-80" />
 				</div>
 			</div>
 		);
 	}
 
-	// Cores para os gráficos
-	const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
-
 	return (
-		<div className="space-y-6">
-			<div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-					<p className="text-muted-foreground">Bem-vindo de volta! Aqui está um resumo da sua atividade recente.</p>
-				</div>
-				<div className="flex items-center gap-2">
-					<Tabs defaultValue="week" className="w-[300px]" onValueChange={setPeriod}>
-						<TabsList className="grid w-full grid-cols-3">
-							<TabsTrigger value="week">Semana</TabsTrigger>
-							<TabsTrigger value="month">Mês</TabsTrigger>
-							<TabsTrigger value="year">Ano</TabsTrigger>
-						</TabsList>
-					</Tabs>
-					<Link href="/dashboard/daily-entries/new">
-						<Button>
-							<Plus className="mr-2 h-4 w-4" />
-							Nova Entrada
-						</Button>
+		<div className="container py-6 space-y-6">
+			<div className="flex items-center justify-between">
+				<h1 className="text-2xl font-bold">Dashboard</h1>
+				<Button asChild>
+					<Link href="/dashboard/weekly-periods/new">
+						<Plus className="mr-2 h-4 w-4" />
+						Novo Período
 					</Link>
-				</div>
+				</Button>
 			</div>
 
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+			{/* Cards de estatísticas */}
+			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Ganhos Totais</CardTitle>
-						<DollarSign className="h-4 w-4 text-muted-foreground" />
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium flex items-center">
+							<DollarSign className="h-4 w-4 mr-2 text-primary" />
+							Ganhos Líquidos Totais
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">€{dashboardData.totals.earnings.toFixed(2)}</div>
-						<div className="flex items-center space-x-2">
-							<p className={`text-xs ${dashboardData.changes.earnings >= 0 ? "text-green-500" : "text-red-500"}`}>
-								{dashboardData.changes.earnings >= 0 ? (
-									<ArrowUpRight className="inline h-3 w-3 mr-1" />
+						<div className="text-2xl font-bold">{formatCurrency(stats.netEarnings)}</div>
+						<p className="text-xs text-muted-foreground">
+							{stats.totalWeeklyPeriods > 0
+								? `Em ${stats.totalWeeklyPeriods} períodos semanais`
+								: "Nenhum período registrado"}
+						</p>
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium flex items-center">
+							<Calendar className="h-4 w-4 mr-2 text-primary" />
+							Média Semanal
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="text-2xl font-bold">{formatCurrency(stats.averageWeeklyEarnings)}</div>
+						<p className="text-xs text-muted-foreground">Ganhos líquidos por semana</p>
+					</CardContent>
+				</Card>
+
+				<Card>
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium flex items-center">
+							<LineChart className="h-4 w-4 mr-2 text-primary" />
+							Tendência Semanal
+						</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<div className="flex items-center">
+							<div className="text-2xl font-bold">
+								{stats.weeklyTrend === 0 && stats.previousWeekEarnings === 0 ? (
+									"N/A"
 								) : (
-									<ArrowDownRight className="inline h-3 w-3 mr-1" />
+									<>
+										{stats.weeklyTrend > 0 ? "+" : ""}
+										{stats.weeklyTrend.toFixed(1)}%
+									</>
 								)}
-								{Math.abs(dashboardData.changes.earnings).toFixed(1)}%
-							</p>
-							<p className="text-xs text-muted-foreground">vs. período anterior</p>
+							</div>
+							{stats.weeklyTrend > 0 ? (
+								<TrendingUp className="ml-2 h-4 w-4 text-green-500" />
+							) : stats.weeklyTrend < 0 ? (
+								<TrendingDown className="ml-2 h-4 w-4 text-red-500" />
+							) : null}
 						</div>
+						<p className="text-xs text-muted-foreground">
+							{stats.previousWeekEarnings > 0 || stats.currentWeekEarnings > 0 ? (
+								<>
+									{formatCurrency(stats.currentWeekEarnings)} vs {formatCurrency(stats.previousWeekEarnings)}
+								</>
+							) : (
+								"Dados insuficientes para comparação"
+							)}
+						</p>
 					</CardContent>
 				</Card>
 
 				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Ganhos Líquidos</CardTitle>
-						<TrendingUp className="h-4 w-4 text-muted-foreground" />
+					<CardHeader className="pb-2">
+						<CardTitle className="text-sm font-medium flex items-center">
+							<DollarSign className="h-4 w-4 mr-2 text-primary" />
+							Despesas Totais
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<div className="text-2xl font-bold">€{dashboardData.totals.netEarnings.toFixed(2)}</div>
-						<div className="text-xs text-muted-foreground">
-							{((dashboardData.totals.netEarnings / dashboardData.totals.earnings) * 100).toFixed(1)}% dos ganhos totais
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Distância Total</CardTitle>
-						<Car className="h-4 w-4 text-muted-foreground" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">{dashboardData.totals.distance.toFixed(0)} km</div>
-						<div className="flex items-center space-x-2">
-							<p className={`text-xs ${dashboardData.changes.distance >= 0 ? "text-green-500" : "text-red-500"}`}>
-								{dashboardData.changes.distance >= 0 ? (
-									<ArrowUpRight className="inline h-3 w-3 mr-1" />
-								) : (
-									<ArrowDownRight className="inline h-3 w-3 mr-1" />
-								)}
-								{Math.abs(dashboardData.changes.distance).toFixed(1)}%
-							</p>
-							<p className="text-xs text-muted-foreground">vs. período anterior</p>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-						<CardTitle className="text-sm font-medium">Custo por km</CardTitle>
-						<Fuel className="h-4 w-4 text-muted-foreground" />
-					</CardHeader>
-					<CardContent>
-						<div className="text-2xl font-bold">€{dashboardData.averages.costPerKm.toFixed(2)}/km</div>
-						<div className="text-xs text-muted-foreground">
-							Consumo médio: {dashboardData.averages.fuelConsumption.toFixed(1)} kWh/100km
-						</div>
+						<div className="text-2xl font-bold">{formatCurrency(stats.totalExpenses)}</div>
+						<p className="text-xs text-muted-foreground">
+							{stats.totalEarnings > 0
+								? `${((stats.totalExpenses / stats.totalEarnings) * 100).toFixed(0)}% dos ganhos brutos`
+								: "0% dos ganhos brutos"}
+						</p>
 					</CardContent>
 				</Card>
 			</div>
 
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-				<Card className="md:col-span-4">
+			{/* Gráficos */}
+			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<Card>
 					<CardHeader>
-						<CardTitle>Ganhos por Dia</CardTitle>
-						<CardDescription>Visualização dos seus ganhos diários no período selecionado</CardDescription>
+						<CardTitle>Tendência de Ganhos Semanais</CardTitle>
+						<CardDescription>Evolução dos ganhos líquidos nas últimas semanas</CardDescription>
 					</CardHeader>
-					<CardContent className="h-[300px]">
-						<ResponsiveContainer width="100%" height="100%">
-							<AreaChart data={dashboardData.charts.earnings}>
-								<defs>
-									<linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-										<stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
-									</linearGradient>
-									<linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
-										<stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
-										<stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
-									</linearGradient>
-								</defs>
-								<CartesianGrid strokeDasharray="3 3" />
-								<XAxis dataKey="day" />
-								<YAxis tickFormatter={(value) => `€${value}`} />
-								<Tooltip
-									formatter={(value) => {
-										return typeof value === "number" ? [`€${value.toFixed(2)}`, ""] : [`€${value}`, ""];
-									}}
-								/>
-								<Legend />
-								<Area
-									type="monotone"
-									dataKey="earnings"
-									name="Ganhos Brutos"
-									stroke="#8884d8"
-									fillOpacity={1}
-									fill="url(#colorEarnings)"
-								/>
-								<Area
-									type="monotone"
-									dataKey="net"
-									name="Ganhos Líquidos"
-									stroke="#82ca9d"
-									fillOpacity={1}
-									fill="url(#colorNet)"
-								/>
-							</AreaChart>
-						</ResponsiveContainer>
-					</CardContent>
-				</Card>
-
-				<Card className="md:col-span-3">
-					<CardHeader>
-						<CardTitle>Distribuição de Ganhos</CardTitle>
-						<CardDescription>Distribuição dos seus ganhos por plataforma</CardDescription>
-					</CardHeader>
-					<CardContent className="h-[300px]">
-						<ResponsiveContainer width="100%" height="100%">
-							<PieChart>
-								<Pie
-									data={dashboardData.charts.earningsSource}
-									cx="50%"
-									cy="50%"
-									labelLine={false}
-									label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-									outerRadius={80}
-									fill="#8884d8"
-									dataKey="value"
-								>
-									{dashboardData.charts.earningsSource.map((entry: any) => (
-										<Cell
-											key={entry.id}
-											fill={
-												COLORS[
-													dashboardData.charts.earningsSource.findIndex((e: any) => e.id === entry.id) % COLORS.length
-												]
-											}
+					<CardContent>
+						{weeklyTrendData.length > 0 ? (
+							<div className="h-80">
+								<ResponsiveContainer width="100%" height="100%">
+									<AreaChart data={weeklyTrendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+										<CartesianGrid strokeDasharray="3 3" />
+										<XAxis dataKey="name" />
+										<YAxis />
+										<Tooltip formatter={(value) => formatCurrency(value as number)} />
+										<Area
+											type="monotone"
+											dataKey="earnings"
+											name="Ganhos Líquidos"
+											stroke="#8884d8"
+											fill="#8884d8"
+											fillOpacity={0.3}
 										/>
-									))}
-								</Pie>
-								<Tooltip
-									formatter={(value) => {
-										return typeof value === "number" ? [`€${value.toFixed(2)}`, ""] : [`€${value}`, ""];
-									}}
-								/>
-							</PieChart>
-						</ResponsiveContainer>
+									</AreaChart>
+								</ResponsiveContainer>
+							</div>
+						) : (
+							<div className="flex flex-col items-center justify-center py-12 text-center">
+								<p className="text-muted-foreground">Nenhum dado disponível para exibir o gráfico.</p>
+							</div>
+						)}
 					</CardContent>
 				</Card>
-			</div>
 
-			<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-				<Card className="md:col-span-4">
+				<Card>
 					<CardHeader>
-						<CardTitle>Entradas Recentes</CardTitle>
-						<CardDescription>Suas últimas 5 entradas de dados</CardDescription>
+						<CardTitle>Ganhos vs Despesas</CardTitle>
+						<CardDescription>Comparativo dos últimos 3 meses</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<div className="space-y-4">
-							{dashboardData.recentEntries.map((entry: any) => (
-								<div key={entry.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-									<div className="flex items-center space-x-4">
-										<div className="rounded-full bg-primary/10 p-2">
-											<Calendar className="h-4 w-4 text-primary" />
-										</div>
-										<div>
-											<p className="text-sm font-medium">{format(parseISO(entry.date), "dd/MM/yyyy")}</p>
-											<p className="text-xs text-muted-foreground">
-												{entry.distance} km | €{entry.totalEarnings.toFixed(2)}
-											</p>
-										</div>
-									</div>
-									<Link href={`/dashboard/daily-entries/${entry.id}`}>
-										<Button variant="ghost" size="icon">
-											<ArrowRight className="h-4 w-4" />
-										</Button>
-									</Link>
-								</div>
-							))}
-						</div>
-					</CardContent>
-					<CardFooter>
-						<Link href="/dashboard/daily-entries" className="w-full">
-							<Button variant="outline" className="w-full">
-								Ver Todas as Entradas
-							</Button>
-						</Link>
-					</CardFooter>
-				</Card>
-
-				<Card className="md:col-span-3">
-					<CardHeader>
-						<CardTitle>Eficiência</CardTitle>
-						<CardDescription>Custo por km e consumo de energia</CardDescription>
-					</CardHeader>
-					<CardContent className="h-[300px]">
-						<ResponsiveContainer width="100%" height="100%">
-							<LineChart data={dashboardData.charts.efficiency}>
-								<CartesianGrid strokeDasharray="3 3" />
-								<XAxis dataKey="day" />
-								<YAxis yAxisId="left" tickFormatter={(value) => `€${value}`} />
-								<YAxis yAxisId="right" orientation="right" tickFormatter={(value) => `${value}`} />
-								<Tooltip
-									formatter={(value, name) => {
-										if (name === "Custo por km")
-											return typeof value === "number" ? [`€${value.toFixed(2)}/km`, name] : [`€${value}/km`, name];
-										if (name === "Consumo")
-											return typeof value === "number"
-												? [`${value.toFixed(1)} kWh/100km`, name]
-												: [`${value} kWh/100km`, name];
-										return [value, name];
-									}}
-								/>
-								<Legend />
-								<Line
-									yAxisId="left"
-									type="monotone"
-									dataKey="costPerKm"
-									name="Custo por km"
-									stroke="#8884d8"
-									activeDot={{ r: 8 }}
-								/>
-								<Line
-									yAxisId="right"
-									type="monotone"
-									dataKey="consumption"
-									name="Consumo"
-									stroke="#82ca9d"
-									activeDot={{ r: 8 }}
-								/>
-							</LineChart>
-						</ResponsiveContainer>
+						{earningsVsExpensesData.length > 0 ? (
+							<div className="h-80">
+								<ResponsiveContainer width="100%" height="100%">
+									<BarChart data={earningsVsExpensesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+										<CartesianGrid strokeDasharray="3 3" />
+										<XAxis dataKey="name" />
+										<YAxis />
+										<Tooltip formatter={(value) => formatCurrency(value as number)} />
+										<Legend />
+										<Bar dataKey="ganhos" name="Ganhos" fill="#4CAF50" />
+										<Bar dataKey="despesas" name="Despesas" fill="#F44336" />
+										<Bar dataKey="liquido" name="Líquido" fill="#2196F3" />
+									</BarChart>
+								</ResponsiveContainer>
+							</div>
+						) : (
+							<div className="flex flex-col items-center justify-center py-12 text-center">
+								<p className="text-muted-foreground">Nenhum dado disponível para exibir o gráfico.</p>
+							</div>
+						)}
 					</CardContent>
 				</Card>
 			</div>
+
+			{/* Períodos recentes */}
+			<Card>
+				<CardHeader className="flex flex-row items-center justify-between">
+					<div>
+						<CardTitle>Períodos Semanais Recentes</CardTitle>
+						<CardDescription>Seus períodos semanais mais recentes</CardDescription>
+					</div>
+					<Button variant="outline" size="sm" asChild>
+						<Link href="/dashboard/weekly-periods">
+							Ver Todos
+							<ArrowRight className="ml-2 h-4 w-4" />
+						</Link>
+					</Button>
+				</CardHeader>
+				<CardContent>
+					{weeklyPeriods.length > 0 ? (
+						<div className="space-y-4">
+							{weeklyPeriods
+								.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())
+								.slice(0, 3)
+								.map((period) => {
+									const netEarnings = calculatePeriodNetEarnings(period);
+									return (
+										<Link href={`/dashboard/weekly-periods/${period.id}`} key={period.id} className="block">
+											<div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors">
+												<div>
+													<h3 className="font-medium">{period.name || "Período Semanal"}</h3>
+													<p className="text-sm text-muted-foreground">
+														{format(new Date(period.startDate), "dd/MM/yyyy", {
+															locale: ptBR,
+														})}{" "}
+														a{" "}
+														{format(new Date(period.endDate), "dd/MM/yyyy", {
+															locale: ptBR,
+														})}
+													</p>
+												</div>
+												<div className="text-right">
+													<p className={`font-medium ${netEarnings >= 0 ? "text-green-600" : "text-red-600"}`}>
+														{formatCurrency(netEarnings)}
+													</p>
+													<p className="text-xs text-muted-foreground">{period.Shift?.length || 0} turnos</p>
+												</div>
+											</div>
+										</Link>
+									);
+								})}
+						</div>
+					) : (
+						<div className="flex flex-col items-center justify-center py-12 text-center">
+							<p className="text-muted-foreground mb-4">Você ainda não tem períodos semanais registrados.</p>
+							<Button asChild>
+								<Link href="/dashboard/weekly-periods/new">
+									<Plus className="mr-2 h-4 w-4" />
+									Criar Primeiro Período
+								</Link>
+							</Button>
+						</div>
+					)}
+				</CardContent>
+			</Card>
 		</div>
 	);
 }

@@ -539,7 +539,7 @@ export default function SettingsPage() {
 														<SelectContent>
 															<SelectItem value="EUR">Euro (€)</SelectItem>
 															<SelectItem value="USD">Dólar ($)</SelectItem>
-															<SelectItem value="BRL">Real (R$)</SelectItem>
+															<SelectItem value="BRL">Real (€)</SelectItem>
 														</SelectContent>
 													</Select>
 													<FormMessage />

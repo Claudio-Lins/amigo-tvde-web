@@ -1,161 +1,155 @@
-You are a Senior Front-End Developer and an Expert in ReactJS, NextJS, JavaScript, TypeScript, HTML, CSS and modern UI/UX frameworks (e.g., TailwindCSS, Shadcn, Radix). You are thoughtful, give nuanced answers, and are brilliant at reasoning. You carefully provide accurate, factual, thoughtful answers, and are a genius at reasoning.
+// Amigo TVDE App - Cursor Rules
+// This file helps Cursor AI understand the scope of the project
 
-- Follow the user’s requirements carefully & to the letter.
-- First think step-by-step - describe your plan for what to build in pseudocode, written out in great detail.
-- Confirm, then write code!
-- Always write correct, best practice, DRY principle (Dont Repeat Yourself), bug free, fully functional and working code also it should be aligned to listed rules down below at Code Implementation Guidelines .
-- Focus on easy and readability code, over being performant.
-- Fully implement all requested functionality.
-- Leave NO todo’s, placeholders or missing pieces.
-- Ensure code is complete! Verify thoroughly finalised.
-- Include all required imports, and ensure proper naming of key components.
-- Be concise Minimize any other prose.
-- If you think there might not be a correct answer, you say so.
-- If you do not know the answer, say so, instead of guessing.
-
-### Coding Environment
-The user asks questions about the following coding languages:
-- ReactJS
-- NextJS
-- JavaScript
-- TypeScript
-- TailwindCSS
-- HTML
-- CSS
-- Strapi
-
-### Code Implementation Guidelines
-Follow these rules when you write code:
-- Use early returns whenever possible to make the code more readable.
-- Always use Tailwind classes for styling HTML elements; avoid using CSS or tags.
-- Use “class:” instead of the tertiary operator in class tags whenever possible.
-- Use descriptive variable and function/const names. Also, event functions should be named with a “handle” prefix, like “handleClick” for onClick and “handleKeyDown” for onKeyDown.
-- Implement accessibility features on elements. For example, a tag should have a tabindex=“0”, aria-label, on:click, and on:keydown, and similar attributes.
-- Use functions instead of consts, for example, “function toggle() ”. Also, define a type if possible.
-
-{
-  "project": {
-    "name": "Amigo TVDE App",
-    "description": "A platform for ride-hailing drivers to track earnings, expenses, and operational efficiency.",
-    "technologies": [
-      "Next.js",
-      "Prisma",
-      "PostgreSQL",
-      "React Hook Form",
-      "Zustand",
-      "Tailwind CSS",
-      "Shadcn/ui"
-    ],
-     "features": [
-      "Daily data entry for mileage, energy/fuel consumption, and earnings.",
-      "Automatic calculations for net earnings, cost per km, and energy efficiency.",
-      "Visualization of results through charts and tables.",
-      "User-friendly interface for easy data input and analysis."
-    ],
-     "rules": [
-    {
-      "context": "When entering daily ride data",
-      "action": "Input the following data:",
-      "details": [
-        "Initial and final mileage.",
-        "Energy consumption (kWh/100 km) or fuel consumption (liters/100 km).",
-        "Charging or refueling costs.",
-        "Earnings from Uber and Bolt."
-      ]
-    },
-    {
-      "context": "When calculating distance traveled",
-      "action": "Use the formula:",
-      "code": "Distance Traveled = Final Mileage - Initial Mileage"
-    },
-    {
-      "context": "When calculating cost per kilometer",
-      "action": "Use the formula:",
-      "code": "Cost per km = Charging/Refueling Cost / Distance Traveled"
-    },
-    {
-      "context": "When calculating energy efficiency",
-      "action": "Use the formula:",
-      "code": "Energy Efficiency (kWh/100 km) = (Energy Consumption / Distance Traveled) * 100"
-    },
-    {
-      "context": "When calculating net earnings",
-      "action": "Use the formula:",
-      "code": "Net Earnings = Total Earnings (Uber + Bolt) - Charging/Refueling Costs"
-    }
-  ],
-  "tips": [
-    "Regularly input data to keep reports accurate and up-to-date.",
-    "Use the energy efficiency metric to identify opportunities for improvement.",
-    "Compare cost per km across different days to find cost-saving opportunities.",
-    "Leverage the visualization tools to easily spot trends and patterns."
-  ],
-    "structure": {
-      "pages": "src/pages",
-      "components": "src/components",
-      "styles": "src/styles",
-      "stores": "src/stores",
-      "actions": "src/actions",
-      "schemas": "src/schemas",
-      "prisma": "prisma"
-    }
-  },
-  "rules": [
-    {
-      "context": "When creating a new page",
-      "action": "Create a new file in src/pages with the following structure:",
-      "code": "export default function PageName() {\n  return (\n    <div>\n      {/* Content */}\n    </div>\n  );\n}"
-    },
-    {
-      "context": "When creating a new component",
-      "action": "Create a new file in src/components with the following structure:",
-      "code": "export function ComponentName() {\n  return (\n    <div>\n      {/* Content */}\n    </div>\n  );\n}"
-    },
-    {
-      "context": "When using React Hook Form",
-      "action": "Import and use the following structure:",
-      "code": "import { useForm } from 'react-hook-form';\n\nconst { register, handleSubmit, formState: { errors } } = useForm();"
-    },
-    {
-      "context": "When creating a new store with Zustand",
-      "action": "Create a new file in src/stores with the following structure:",
-      "code": "import { create } from 'zustand';\n\nconst useStore = create((set) => ({\n  // State and actions\n}));\n\nexport default useStore;"
-    },
-    {
-      "context": "When using Tailwind CSS",
-      "action": "Add classes directly to your JSX elements. Example:",
-      "code": "<div className='bg-blue-500 text-white p-4'>\n  {/* Content */}\n</div>"
-    },
-    {
-      "context": "When using Shadcn/ui components",
-      "action": "Import and use the component from the library. Example:",
-      "code": "import { Button } from '@/components/ui/button';\n\n<Button>Click me</Button>"
-    },
-    {
-      "context": "When creating a new Prisma model",
-      "action": "Add the model to schema.prisma with the following structure:",
-      "code": "model ModelName {\n  id        String   @id @default(uuid())\n  // Fields\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}"
-    },
-    {
-      "context": "When creating a new API route",
-      "action": "Create a new file in src/pages/api with the following structure:",
-      "code": "import { NextApiRequest, NextApiResponse } from 'next';\n\nexport default function handler(req: NextApiRequest, res: NextApiResponse) {\n  // Handle request\n}"
-    }
-  ],
-  "shortcuts": {
-    "createPage": "Ctrl+Shift+P",
-    "createComponent": "Ctrl+Shift+C",
-    "createStore": "Ctrl+Shift+S",
-    "createPrismaModel": "Ctrl+Shift+M",
-    "formatCode": "Alt+Shift+F"
-  },
-  "tips": [
-    "Use Tailwind CSS for rapid styling.",
-    "Leverage Shadcn/ui for pre-built, accessible components.",
-    "Keep your Zustand stores modular and focused.",
-    "Use React Hook Form for efficient form management.",
-    "Always validate your forms with Zod.",
-    "Use Prisma migrations to keep your database schema up to date.",
-    "Use normal function ao invés de arrow functions, sempre que necessário",
-  ]
-}
+module.exports = {
+	project: {
+		name: "Amigo TVDE App",
+		description:
+			"An application for TVDE (Uber and Bolt) drivers to track earnings, expenses, and operational efficiency with a focus on weekly reporting periods.",
+		technologies: [
+			"Next.js",
+			"Prisma",
+			"PostgreSQL",
+			"React Hook Form",
+			"Zustand",
+			"Tailwind CSS",
+			"Shadcn/ui",
+			"TypeScript",
+		],
+		features: [
+			"Weekly tracking periods from Monday to Sunday",
+			"Initial and final odometer readings for each period",
+			"Daily shift data entry with odometer reading reminders",
+			"Detailed financial reports (gross/net earnings - daily, weekly, monthly, yearly)",
+			"Consumption and earnings reports",
+			"Expense tracking (fuel, meals, and other costs)",
+			"Visualization of results through charts and tables",
+		],
+		structure: {
+			pages: "src/pages",
+			components: "src/components",
+			styles: "src/styles",
+			stores: "src/stores",
+			actions: "src/actions",
+			schemas: "src/schemas",
+			prisma: "prisma",
+		},
+	},
+	rules: [
+		{
+			context: "Tratamento",
+			action: "Sempre tratar pelo meu nome Claudio. Não use palavras de baixo nível, como amiguinho, amigão, etc.",
+		},
+		{
+			context: "When creating any TypeScript file",
+			action: "Always use TypeScript for all development",
+			code: "// TypeScript example\ninterface UserData {\n  id: string;\n  name: string;\n}\n\nfunction getUserData(): UserData {\n  return { id: '1', name: 'Driver' };\n}",
+		},
+		{
+			context: "When defining data structures",
+			action: "Use interfaces instead of types when possible",
+			code: "// Preferred\ninterface ShiftData {\n  date: Date;\n  initialKm: number;\n  finalKm: number;\n}\n\n// Avoid\n// type ShiftData = {\n//   date: Date;\n//   initialKm: number;\n//   finalKm: number;\n// };",
+		},
+		{
+			context: "When creating functions",
+			action: "Use traditional function declarations instead of arrow functions",
+			code: "// Preferred\nfunction calculateDistance(initialKm: number, finalKm: number): number {\n  return finalKm - initialKm;\n}\n\n// Avoid\n// const calculateDistance = (initialKm: number, finalKm: number): number => {\n//   return finalKm - initialKm;\n// };",
+		},
+		{
+			context: "When creating a new page",
+			action: "Create a new file in src/pages with the following structure:",
+			code: "export default function PageName() {\n  return (\n    <div>\n      {/* Content */}\n    </div>\n  );\n}",
+		},
+		{
+			context: "When creating a new component",
+			action: "Create a new file in src/components with the following structure:",
+			code: "export function ComponentName() {\n  return (\n    <div>\n      {/* Content */}\n    </div>\n  );\n}",
+		},
+		{
+			context: "When entering weekly data",
+			action: "Always record the following information:",
+			details: [
+				"Week start date (Monday)",
+				"Week end date (Sunday)",
+				"Initial odometer reading (Monday)",
+				"Final odometer reading (Sunday)",
+			],
+		},
+		{
+			context: "When entering daily shift data",
+			action: "Prompt user for the following information:",
+			details: [
+				"Current odometer reading at shift start",
+				"Earnings from Uber and Bolt platforms",
+				"Fuel/energy expenses",
+				"Meal expenses",
+				"Other expenses (with category)",
+			],
+		},
+		{
+			context: "When calculating weekly distance",
+			action: "Use the formula:",
+			code: "function calculateWeeklyDistance(initialOdometer: number, finalOdometer: number): number {\n  return finalOdometer - initialOdometer;\n}",
+		},
+		{
+			context: "When calculating net earnings",
+			action: "Use the formula:",
+			code: "function calculateNetEarnings(grossEarnings: number, totalExpenses: number): number {\n  return grossEarnings - totalExpenses;\n}",
+		},
+		{
+			context: "When calculating cost per kilometer",
+			action: "Use the formula:",
+			code: "function calculateCostPerKm(totalExpenses: number, distanceTraveled: number): number {\n  return totalExpenses / distanceTraveled;\n}",
+		},
+		{
+			context: "When using React Hook Form",
+			action: "Import and use the following structure:",
+			code: "import { useForm } from 'react-hook-form';\n\nfunction FormComponent() {\n  const { register, handleSubmit, formState: { errors } } = useForm();\n  \n  function onSubmit(data) {\n    // Handle form submission\n  }\n  \n  return (\n    <form onSubmit={handleSubmit(onSubmit)}>\n      {/* Form fields */}\n    </form>\n  );\n}",
+		},
+		{
+			context: "When creating a new store with Zustand",
+			action: "Create a new file in src/stores with the following structure:",
+			code: "import { create } from 'zustand';\n\ninterface StoreState {\n  // State properties\n}\n\nconst useStore = create<StoreState>((set) => ({\n  // State and actions\n}));\n\nexport default useStore;",
+		},
+		{
+			context: "When using Tailwind CSS",
+			action: "Add classes directly to your JSX elements. Example:",
+			code: "<div className='bg-blue-500 text-white p-4'>\n  {/* Content */}\n</div>",
+		},
+		{
+			context: "When using Shadcn/ui components",
+			action: "Import and use the component from the library. Example:",
+			code: "import { Button } from '@/components/ui/button';\n\nfunction MyComponent() {\n  return <Button>Click me</Button>;\n}",
+		},
+		{
+			context: "When creating a new Prisma model",
+			action: "Add the model to schema.prisma with the following structure:",
+			code: "model Driver {\n  id          String   @id @default(uuid())\n  name        String\n  weeks       Week[]\n  createdAt   DateTime @default(now())\n  updatedAt   DateTime @updatedAt\n}\n\nmodel Week {\n  id              String   @id @default(uuid())\n  startDate       DateTime\n  endDate         DateTime\n  initialOdometer Float\n  finalOdometer   Float\n  shifts          Shift[]\n  expenses        Expense[]\n  driverId        String\n  driver          Driver   @relation(fields: [driverId], references: [id])\n  createdAt       DateTime @default(now())\n  updatedAt       DateTime @updatedAt\n}\n\nmodel Shift {\n  id              String   @id @default(uuid())\n  date            DateTime\n  uberEarnings    Float\n  boltEarnings    Float\n  odometer        Float\n  weekId          String\n  week            Week     @relation(fields: [weekId], references: [id])\n  createdAt       DateTime @default(now())\n  updatedAt       DateTime @updatedAt\n}\n\nmodel Expense {\n  id          String      @id @default(uuid())\n  date        DateTime\n  amount      Float\n  category    ExpenseType\n  notes       String?\n  weekId      String\n  week        Week        @relation(fields: [weekId], references: [id])\n  createdAt   DateTime    @default(now())\n  updatedAt   DateTime    @updatedAt\n}\n\nenum ExpenseType {\n  FUEL\n  MEAL\n  OTHER\n}",
+		},
+		{
+			context: "When creating a new API route",
+			action: "Create a new file in src/pages/api with the following structure:",
+			code: "import { NextApiRequest, NextApiResponse } from 'next';\n\nexport default function handler(req: NextApiRequest, res: NextApiResponse) {\n  // Handle request\n}",
+		},
+	],
+	shortcuts: {
+		createPage: "Ctrl+Shift+P",
+		createComponent: "Ctrl+Shift+C",
+		createStore: "Ctrl+Shift+S",
+		createPrismaModel: "Ctrl+Shift+M",
+		formatCode: "Alt+Shift+F",
+	},
+	tips: [
+		"The tracking period always starts on Monday and ends on Sunday",
+		"Always remind users to enter odometer readings at the start of each shift",
+		"Generate comprehensive financial reports (daily, weekly, monthly, and yearly)",
+		"Track expenses in categories: fuel, meals, and other costs",
+		"Use traditional function declarations instead of arrow functions",
+		"Always use TypeScript for all development",
+		"Prefer interfaces over types for data structures",
+		"Use React Hook Form for efficient form management",
+		"Leverage Shadcn/ui for pre-built, accessible components",
+		"Keep Zustand stores modular and focused",
+		"Use Prisma migrations to keep your database schema up to date",
+	],
+};

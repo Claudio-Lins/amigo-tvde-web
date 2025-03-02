@@ -1,8 +1,7 @@
 "use client";
 
-import { createShift } from "@/actions/shift-actions";
+import { getShiftById, updateShift } from "@/actions/shift-actions";
 import { getVehicles } from "@/actions/vehicle-actions";
-import { getWeeklyPeriodById } from "@/actions/weekly-period-actions";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +17,7 @@ import { format, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowLeft, CalendarIcon, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -26,10 +25,10 @@ import { z } from "zod";
 
 type FormData = z.infer<typeof shiftSchema>;
 
-export default function NewShiftPage() {
+export default function EditShiftPage() {
 	const router = useRouter();
-	const searchParams = useSearchParams();
-	const periodId = searchParams.get("periodId");
+	const params = useParams();
+	const shiftId = params.id as string;
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [vehicles, setVehicles] = useState<any[]>([]);
@@ -47,7 +46,7 @@ export default function NewShiftPage() {
 			odometer: 0,
 			vehicleId: "",
 			notes: "",
-			weeklyPeriodId: periodId || "",
+			weeklyPeriodId: "",
 		},
 	});
 
@@ -59,86 +58,59 @@ export default function NewShiftPage() {
 
 				if (vehiclesResult && !("error" in vehiclesResult)) {
 					setVehicles(vehiclesResult);
-
-					// Definir o veículo padrão, se houver
-					const defaultVehicle = vehiclesResult.find((v) => v.isDefault);
-					if (defaultVehicle) {
-						form.setValue("vehicleId", defaultVehicle.id);
-					} else if (vehiclesResult.length > 0) {
-						form.setValue("vehicleId", vehiclesResult[0].id);
-					}
 				}
 
-				// Carregar período semanal, se o ID foi fornecido
-				if (periodId) {
-					const periodResult = await getWeeklyPeriodById(periodId);
+				// Carregar dados do turno
+				const shiftResult = await getShiftById(shiftId);
 
-					if (periodResult && !("error" in periodResult)) {
-						setWeeklyPeriod(periodResult);
-						form.setValue("weeklyPeriodId", periodResult.id);
-					} else {
-						toast.error(periodResult?.error || "Erro ao carregar período semanal");
-					}
+				if (shiftResult && !("error" in shiftResult)) {
+					const { shift, weeklyPeriod } = shiftResult;
+					setWeeklyPeriod(weeklyPeriod);
+
+					// Preencher o formulário com os dados do turno
+					form.reset({
+						date: new Date(shift.date),
+						uberEarnings: shift.uberEarnings,
+						boltEarnings: shift.boltEarnings,
+						otherEarnings: shift.otherEarnings || 0,
+						initialOdometer: shift.initialOdometer || 0,
+						finalOdometer: shift.finalOdometer || undefined,
+						odometer: shift.odometer,
+						vehicleId: shift.vehicleId,
+						notes: shift.notes || "",
+						weeklyPeriodId: shift.weeklyPeriodId || "",
+					});
+				} else {
+					toast.error(shiftResult?.error || "Erro ao carregar dados do turno");
+					router.push("/dashboard");
 				}
 			} catch (error) {
 				console.error("Erro ao carregar dados:", error);
 				toast.error("Erro ao carregar dados necessários");
+				router.push("/dashboard");
 			} finally {
 				setIsLoading(false);
 			}
 		}
 
 		loadData();
-	}, [form, periodId]);
+	}, [form, shiftId, router]);
 
 	async function onSubmit(data: FormData) {
 		try {
 			setIsSubmitting(true);
 
-			// Verificar se o veículo foi selecionado
-			if (!data.vehicleId) {
-				toast.error("Selecione um veículo");
-				return;
-			}
+			const result = await updateShift(shiftId, data);
 
-			// Verificar se o período semanal foi selecionado
-			if (!data.weeklyPeriodId) {
-				toast.error("Período semanal não especificado");
-				return;
-			}
-
-			// Criar um FormData para enviar os dados
-			const formData = new FormData();
-			formData.append("date", data.date instanceof Date ? data.date.toISOString() : new Date(data.date).toISOString());
-			formData.append("uberEarnings", data.uberEarnings.toString());
-			formData.append("boltEarnings", data.boltEarnings.toString());
-			formData.append("otherEarnings", (data.otherEarnings || 0).toString());
-			formData.append("initialOdometer", data.initialOdometer.toString());
-			if (data.finalOdometer) {
-				formData.append("finalOdometer", data.finalOdometer.toString());
-			}
-			formData.append("odometer", data.odometer.toString());
-			formData.append("vehicleId", data.vehicleId);
-			formData.append("notes", data.notes || "");
-			formData.append("weeklyPeriodId", data.weeklyPeriodId);
-
-			// Enviar os dados usando fetch diretamente
-			const response = await fetch("/api/shifts", {
-				method: "POST",
-				body: formData,
-			});
-
-			if (response.ok) {
-				const result = await response.json();
-				toast.success("Turno registrado com sucesso");
+			if (result && "success" in result) {
+				toast.success("Turno atualizado com sucesso");
 				router.push(`/dashboard/weekly-periods/${data.weeklyPeriodId}`);
 			} else {
-				const error = await response.json();
-				toast.error(error.message || "Erro ao registrar turno");
+				toast.error(result?.error || "Erro ao atualizar turno");
 			}
 		} catch (error) {
-			console.error("Erro ao registrar turno:", error);
-			toast.error("Erro ao registrar turno");
+			console.error("Erro ao atualizar turno:", error);
+			toast.error("Erro ao atualizar turno");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -173,7 +145,7 @@ export default function NewShiftPage() {
 	if (isLoading) {
 		return (
 			<div className="container py-10">
-				<div className="flex flex-col space-y-4 max-w-md mx-auto">
+				<div className="flex flex-col space-y-4 max-w-3xl mx-auto">
 					<div className="h-8 w-48 bg-muted animate-pulse rounded" />
 					<div className="h-64 bg-muted animate-pulse rounded" />
 				</div>
@@ -182,112 +154,91 @@ export default function NewShiftPage() {
 	}
 
 	return (
-		<div className="container py-10">
-			{/* <div className="max-w-md mx-auto "> */}
+		<div className="container py-20 md:py-0">
 			<div className="flex items-center gap-4 mb-6">
 				<Button variant="outline" size="icon" asChild>
-					<Link href={periodId ? `/dashboard/weekly-periods/${periodId}` : "/dashboard/weekly-periods"}>
+					<Link href={`/dashboard/shifts/${shiftId}`}>
 						<ArrowLeft className="h-4 w-4" />
 					</Link>
 				</Button>
-				<h1 className="text-2xl font-bold">Registrar Novo Turno</h1>
+				<h1 className="text-2xl font-bold">Editar Turno</h1>
 			</div>
 
-			<Card>
+			<Card className="w-full mx-auto">
 				<CardHeader>
-					<CardTitle>Detalhes do Turno</CardTitle>
-					<CardDescription>
-						Registre os detalhes do seu turno para o período {weeklyPeriod?.name || "selecionado"}.
-					</CardDescription>
+					<CardTitle>Editar Turno</CardTitle>
+					<CardDescription>Atualize os dados do turno</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
 						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-							<div className="space-y-6">
-								{/* Data e Veículo */}
-								<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-									<FormField
-										control={form.control}
-										name="date"
-										render={({ field }) => (
-											<FormItem className="flex flex-col">
-												<FormLabel>Data do Turno</FormLabel>
-												<Popover>
-													<PopoverTrigger asChild>
-														<FormControl>
-															<Button
-																variant={"outline"}
-																className={cn(
-																	"w-full pl-3 text-left font-normal",
-																	!field.value && "text-muted-foreground",
-																)}
-															>
-																{field.value ? (
-																	format(field.value, "PPP", { locale: ptBR })
-																) : (
-																	<span>Selecione uma data</span>
-																)}
-																<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-															</Button>
-														</FormControl>
-													</PopoverTrigger>
-													<PopoverContent className="w-auto p-0" align="start">
-														<Calendar
-															mode="single"
-															selected={field.value}
-															onSelect={field.onChange}
-															disabled={(date) => !isDateWithinPeriod(date)}
-															initialFocus
-														/>
-													</PopoverContent>
-												</Popover>
-												<FormDescription>
-													Selecione a data do turno. Deve estar dentro do período semanal.
-												</FormDescription>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-
-									<FormField
-										control={form.control}
-										name="vehicleId"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Veículo</FormLabel>
-												<Select onValueChange={field.onChange} defaultValue={field.value}>
+							<div className="space-y-8">
+								{/* Data */}
+								<FormField
+									control={form.control}
+									name="date"
+									render={({ field }) => (
+										<FormItem className="flex flex-col">
+											<FormLabel>Data</FormLabel>
+											<Popover>
+												<PopoverTrigger asChild>
 													<FormControl>
-														<SelectTrigger>
-															<SelectValue placeholder="Selecione um veículo" />
-														</SelectTrigger>
+														<Button
+															variant={"outline"}
+															className={cn(
+																"w-full pl-3 text-left font-normal",
+																!field.value && "text-muted-foreground",
+															)}
+														>
+															{field.value ? (
+																format(field.value, "PPP", { locale: ptBR })
+															) : (
+																<span>Selecione uma data</span>
+															)}
+															<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+														</Button>
 													</FormControl>
-													<SelectContent>
-														{vehicles.length > 0 ? (
-															vehicles.map((vehicle) => (
-																<SelectItem key={vehicle.id} value={vehicle.id}>
-																	{vehicle.make} {vehicle.model} ({vehicle.year})
-																</SelectItem>
-															))
-														) : (
-															<SelectItem value="none" disabled>
-																Nenhum veículo cadastrado
-															</SelectItem>
-														)}
-													</SelectContent>
-												</Select>
-												<FormDescription>
-													Selecione o veículo utilizado neste turno.
-													{vehicles.length === 0 && (
-														<Link href="/dashboard/vehicles/new" className="text-primary ml-1">
-															Cadastrar veículo
-														</Link>
-													)}
-												</FormDescription>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-								</div>
+												</PopoverTrigger>
+												<PopoverContent className="w-auto p-0" align="start">
+													<Calendar
+														mode="single"
+														selected={field.value}
+														onSelect={field.onChange}
+														disabled={(date) => !isDateWithinPeriod(date)}
+														initialFocus
+													/>
+												</PopoverContent>
+											</Popover>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Veículo */}
+								<FormField
+									control={form.control}
+									name="vehicleId"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Veículo</FormLabel>
+											<Select onValueChange={field.onChange} defaultValue={field.value}>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Selecione um veículo" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													{vehicles.map((vehicle) => (
+														<SelectItem key={vehicle.id} value={vehicle.id}>
+															{vehicle.make} {vehicle.model} ({vehicle.year})
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
 
 								{/* Ganhos */}
 								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -353,7 +304,7 @@ export default function NewShiftPage() {
 								</div>
 
 								{/* Quilometragem */}
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
 									<FormField
 										control={form.control}
 										name="initialOdometer"
@@ -408,7 +359,9 @@ export default function NewShiftPage() {
 														}}
 													/>
 												</FormControl>
-												<FormDescription>Deixe em branco para preencher posteriormente</FormDescription>
+												<FormDescription className="text-xs">
+													Deixe em branco para preencher posteriormente
+												</FormDescription>
 												<FormMessage />
 											</FormItem>
 										)}
@@ -451,27 +404,26 @@ export default function NewShiftPage() {
 								/>
 							</div>
 
-							<div className="flex items-center gap-2 mt-2">
+							{/* <div className="flex items-center gap-2 mt-2">
 								<Button type="button" variant="outline" size="sm" onClick={calculateOdometer}>
 									Calcular Quilometragem Total
 								</Button>
-							</div>
+							</div> */}
 
 							<Button type="submit" disabled={isSubmitting} className="w-full">
 								{isSubmitting ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Registrando...
+										Atualizando...
 									</>
 								) : (
-									"Registrar Turno"
+									"Atualizar Turno"
 								)}
 							</Button>
 						</form>
 					</Form>
 				</CardContent>
 			</Card>
-			{/* </div> */}
 		</div>
 	);
 }

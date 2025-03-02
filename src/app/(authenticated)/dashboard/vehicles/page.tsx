@@ -14,12 +14,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddVehicleForm } from "@/components/vehicle/add-vehicle-form";
 import { cn } from "@/lib/utils";
 import { FuelType, Vehicle } from "@prisma/client";
-import { Car, Check, Edit, Fuel, Star, Trash } from "lucide-react";
+import { Car, Check, Fuel, PlusIcon, Star, Trash } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -28,15 +28,23 @@ export default function VehiclesPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [vehicleToDelete, setVehicleToDelete] = useState<string | null>(null);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+	const [showForceDeleteDialog, setShowForceDeleteDialog] = useState(false);
+	const [vehicleShiftCount, setVehicleShiftCount] = useState(0);
 
 	const fetchVehicles = useCallback(async () => {
 		setIsLoading(true);
 		try {
 			const result = await getUserVehicles();
-			setVehicles(result || []);
+			if (result && result.success) {
+				setVehicles(result.vehicles || []);
+			} else {
+				toast.error(result?.error || "Erro ao carregar veículos");
+				setVehicles([]);
+			}
 		} catch (error) {
 			toast.error("Erro ao carregar veículos");
 			console.error("Erro ao carregar veículos:", error);
+			setVehicles([]);
 		} finally {
 			setIsLoading(false);
 		}
@@ -46,14 +54,6 @@ export default function VehiclesPage() {
 		fetchVehicles();
 	}, [fetchVehicles]);
 
-	// Função para buscar os veículos do usuário
-
-	// Carregar veículos ao montar o componente
-	// useEffect(() => {
-	// 	fetchVehicles();
-	// }, []);
-
-	// Função para definir um veículo como padrão
 	async function handleSetDefaultVehicle(id: string) {
 		try {
 			const result = await setDefaultVehicle(id);
@@ -64,35 +64,51 @@ export default function VehiclesPage() {
 		}
 	}
 
-	// Função para confirmar exclusão de veículo
 	function confirmDeleteVehicle(id: string) {
 		setVehicleToDelete(id);
 		setShowDeleteDialog(true);
 	}
 
-	// Função para excluir um veículo
-	async function handleDeleteVehicle() {
+	async function handleDeleteVehicle(forceDelete = false) {
 		if (!vehicleToDelete) return;
 
-		try {
-			const result = await deleteVehicle(vehicleToDelete);
+		console.log("handleDeleteVehicle chamado com forceDelete:", forceDelete);
+		console.log("vehicleToDelete:", vehicleToDelete);
 
-			if (!result || "error" in result) {
-				toast.error(typeof result?.error === "string" ? result.error : "Erro ao excluir veículo");
-			} else {
-				toast.success("Veículo excluído com sucesso");
+		try {
+			const result = await deleteVehicle(vehicleToDelete, forceDelete);
+			console.log("Resultado da exclusão:", result);
+
+			if (result && "error" in result) {
+				if (result.hasShifts) {
+					console.log("Veículo tem turnos associados, mostrando diálogo de confirmação");
+					console.log("Número de turnos:", result.shiftCount);
+					setVehicleShiftCount(result.shiftCount || 0);
+					setShowForceDeleteDialog(true);
+					setShowDeleteDialog(false);
+					return;
+				}
+				toast.error(result.error || "Erro ao excluir veículo");
+			} else if (result && "success" in result) {
+				toast.success(result.message || "Veículo excluído com sucesso");
 				await fetchVehicles();
+			} else {
+				toast.error("Resposta inválida do servidor");
 			}
+
+			setShowDeleteDialog(false);
+			setShowForceDeleteDialog(false);
+			setVehicleToDelete(null);
 		} catch (error) {
 			toast.error("Erro ao excluir veículo");
 			console.error("Erro ao excluir veículo:", error);
-		} finally {
+
 			setShowDeleteDialog(false);
+			setShowForceDeleteDialog(false);
 			setVehicleToDelete(null);
 		}
 	}
 
-	// Função para traduzir o tipo de combustível
 	function getFuelTypeLabel(fuelType: FuelType) {
 		const fuelTypes = {
 			GASOLINE: "Gasolina",
@@ -103,11 +119,24 @@ export default function VehiclesPage() {
 		return fuelTypes[fuelType] || fuelType;
 	}
 
+	console.log("Estado atual:", {
+		showDeleteDialog,
+		showForceDeleteDialog,
+		vehicleToDelete,
+		vehicleShiftCount,
+	});
+
 	return (
 		<div className="container py-6 space-y-6">
 			<div className="flex items-center justify-between">
 				<h1 className="text-3xl font-bold">Meus Veículos</h1>
-				<AddVehicleForm onSuccess={fetchVehicles} />
+				<Button variant="outline" className="gap-2" asChild>
+					<Link href="/dashboard/vehicles/new">
+						<PlusIcon className="h-4 w-4" />
+						<span>Adicionar Veículo</span>
+					</Link>
+				</Button>
+				{/* <AddVehicleForm onSuccess={fetchVehicles} /> */}
 			</div>
 
 			<Card>
@@ -185,6 +214,9 @@ export default function VehiclesPage() {
 										>
 											<Trash className="h-4 w-4" />
 										</Button>
+										<Button variant="outline" size="sm" asChild>
+											<Link href={`/dashboard/vehicles/${vehicle.id}`}>Ver Detalhes</Link>
+										</Button>
 									</div>
 								</div>
 							))}
@@ -210,7 +242,6 @@ export default function VehiclesPage() {
 				</CardFooter>
 			</Card>
 
-			{/* Diálogo de confirmação de exclusão */}
 			<AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
@@ -221,8 +252,34 @@ export default function VehiclesPage() {
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancelar</AlertDialogCancel>
-						<AlertDialogAction onClick={handleDeleteVehicle} className="bg-red-600 hover:bg-red-700">
+						<AlertDialogAction onClick={() => handleDeleteVehicle()} className="bg-red-600 hover:bg-red-700">
 							Excluir
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+
+			<AlertDialog open={showForceDeleteDialog} onOpenChange={setShowForceDeleteDialog}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Atenção: Veículo em uso</AlertDialogTitle>
+						<AlertDialogDescription>
+							Este veículo está associado a {vehicleShiftCount} turno(s). Se continuar, esses turnos serão associados ao
+							veículo padrão. Esta ação não pode ser desfeita.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel
+							onClick={() => {
+								setShowForceDeleteDialog(false);
+								setShowDeleteDialog(false);
+								setVehicleToDelete(null);
+							}}
+						>
+							Cancelar
+						</AlertDialogCancel>
+						<AlertDialogAction onClick={() => handleDeleteVehicle(true)} className="bg-red-600 hover:bg-red-700">
+							Continuar e Excluir
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
