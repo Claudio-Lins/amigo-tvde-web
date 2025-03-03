@@ -142,9 +142,9 @@ export default function ShiftDetailsPage() {
 							)}
 
 							<div className="flex justify-end">
-								<Button asChild variant="outline">
-									<Link href={`/dashboard/shifts/${shift.id}/edit`}>
-										<Edit className="h-4 w-4 mr-2" />
+								<Button variant="outline" asChild>
+									<Link href={`/dashboard/shifts/edit/${shift.id}`}>
+										<Edit className="mr-2 h-4 w-4" />
 										Editar Turno
 									</Link>
 								</Button>

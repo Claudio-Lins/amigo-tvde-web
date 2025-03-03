@@ -13,7 +13,7 @@ import { WeeklyPeriodSummary } from "@/components/weekly-period/weekly-period-su
 import { Expense, Shift, WeeklyPeriod } from "@prisma/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, Calendar, Check, Clock, DollarSign, Fuel, Power } from "lucide-react";
+import { ArrowLeft, Calendar, Check, Clock, DollarSign, Edit, Fuel, Power } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -21,7 +21,7 @@ import { toast } from "sonner";
 
 // Estender a interface Shift para incluir otherEarnings
 interface ExtendedShift extends Shift {
-	otherEarnings?: number;
+	otherEarnings: number | null;
 }
 
 // Atualizar a interface WeeklyPeriodWithRelations
@@ -340,7 +340,15 @@ export default function WeeklyPeriodDetailsPage() {
 									</Button>
 								</div>
 							) : (
-								<ShiftList shifts={weeklyPeriod.Shift || []} onDelete={handleDeleteShift} />
+								<ShiftList shifts={weeklyPeriod.Shift || []} onDelete={handleDeleteShift}>
+									{(shift) => (
+										<Button variant="ghost" size="icon" asChild>
+											<Link href={`/dashboard/shifts/edit/${shift.id}`}>
+												<Edit className="h-4 w-4" />
+											</Link>
+										</Button>
+									)}
+								</ShiftList>
 							)}
 						</CardContent>
 					</Card>

@@ -11,7 +11,7 @@ import { useState } from "react";
 
 interface ShiftListProps {
 	shifts: Shift[];
-	onDelete?: (shiftId: string) => void;
+	onDelete: (id: string) => void;
 }
 
 export function ShiftList({ shifts, onDelete }: ShiftListProps) {
@@ -39,6 +39,14 @@ export function ShiftList({ shifts, onDelete }: ShiftListProps) {
 	const totalOther = shifts.reduce((sum, shift) => sum + (shift.otherEarnings || 0), 0);
 	const totalEarnings = totalUber + totalBolt + totalOther;
 	const totalDistance = shifts.reduce((sum, shift) => sum + (shift.odometer || 0), 0);
+
+	// Função para formatar valores monetários
+	function formatCurrency(value: number) {
+		return new Intl.NumberFormat("pt-PT", {
+			style: "currency",
+			currency: "EUR",
+		}).format(value);
+	}
 
 	return (
 		<div className="space-y-4">
@@ -69,20 +77,18 @@ export function ShiftList({ shifts, onDelete }: ShiftListProps) {
 								<TableCell className="text-right">
 									<div className="flex justify-end space-x-2">
 										<Button variant="ghost" size="icon" asChild>
-											<Link href={`/dashboard/shifts/${shift.id}/edit`}>
+											<Link href={`/dashboard/shifts/edit/${shift.id}`}>
 												<Edit className="h-4 w-4" />
 											</Link>
 										</Button>
-										{onDelete && (
-											<Button
-												variant="ghost"
-												size="icon"
-												onClick={() => handleDelete(shift.id)}
-												disabled={isDeleting === shift.id}
-											>
-												<Trash className="h-4 w-4 text-destructive" />
-											</Button>
-										)}
+										<Button
+											variant="ghost"
+											size="icon"
+											onClick={() => handleDelete(shift.id)}
+											disabled={isDeleting === shift.id}
+										>
+											<Trash className="h-4 w-4 text-destructive" />
+										</Button>
 									</div>
 								</TableCell>
 							</TableRow>

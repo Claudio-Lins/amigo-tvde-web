@@ -133,6 +133,9 @@ export const shiftSchema = z
 		date: z.date({
 			required_error: "A data do turno é obrigatória",
 		}),
+		startTime: z.date().optional(),
+		endTime: z.date().optional(),
+		breakMinutes: z.number().min(0).optional(),
 		uberEarnings: z.number().min(0, "O valor não pode ser negativo"),
 		boltEarnings: z.number().min(0, "O valor não pode ser negativo"),
 		otherEarnings: z.number().min(0, "O valor não pode ser negativo").optional().default(0),

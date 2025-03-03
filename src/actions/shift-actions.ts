@@ -490,24 +490,32 @@ export async function addShift(data: ShiftFormData) {
 	}
 }
 
-export async function createShift(data: any) {
+export async function createShift(data: ShiftFormData) {
 	try {
+		console.log("Iniciando criação de turno com dados:", JSON.stringify(data, null, 2));
+
 		// Verificar se os dados são válidos
 		if (!data) {
 			return { error: "Dados do turno não fornecidos" };
 		}
 
-		console.log("Dados recebidos:", JSON.stringify(data, null, 2));
+		// Verificar campos obrigatórios
+		if (!data.date || !data.vehicleId || !data.weeklyPeriodId) {
+			return {
+				error: `Campos obrigatórios ausentes: ${!data.date ? "date, " : ""}${!data.vehicleId ? "vehicleId, " : ""}${!data.weeklyPeriodId ? "weeklyPeriodId" : ""}`,
+			};
+		}
 
-		// Tratar a data especificamente para o formato "$D..."
+		// Tratar a data
 		let shiftDate: Date;
-		if (typeof data.date === "string" && data.date.startsWith("$D")) {
-			// Extrair a parte da data após o "$D"
-			shiftDate = new Date(data.date.substring(2));
-		} else if (data.date instanceof Date) {
-			shiftDate = data.date;
+		const dateValue = data.date as unknown;
+
+		if (typeof dateValue === "string" && dateValue.startsWith("$D")) {
+			shiftDate = new Date(dateValue.substring(2));
+		} else if (dateValue instanceof Date) {
+			shiftDate = dateValue;
 		} else {
-			shiftDate = new Date(data.date);
+			shiftDate = new Date(String(dateValue));
 		}
 
 		const clerkUser = await currentUser();
@@ -538,6 +546,25 @@ export async function createShift(data: any) {
 		// Calcular o total de ganhos
 		const totalEarnings = Number(data.uberEarnings) + Number(data.boltEarnings) + Number(data.otherEarnings || 0);
 
+		// Antes de criar o turno, log dos dados que serão enviados ao Prisma
+		console.log("Dados a serem enviados ao Prisma:", {
+			date: shiftDate,
+			uberEarnings: Number(data.uberEarnings),
+			boltEarnings: Number(data.boltEarnings),
+			otherEarnings: Number(data.otherEarnings || 0),
+			totalEarnings,
+			initialOdometer: Number(data.initialOdometer),
+			finalOdometer: data.finalOdometer ? Number(data.finalOdometer) : null,
+			odometer: Number(data.odometer),
+			weeklyPeriodId: data.weeklyPeriodId,
+			userId: dbUser.id,
+			vehicleId: data.vehicleId,
+			notes: data.notes || "",
+			startTime: data.startTime,
+			endTime: data.endTime,
+			breakMinutes: data.breakMinutes || 0,
+		});
+
 		// Criar o turno
 		const shift = await prisma.shift.create({
 			data: {
@@ -553,14 +580,17 @@ export async function createShift(data: any) {
 				userId: dbUser.id,
 				vehicleId: data.vehicleId,
 				notes: data.notes || "",
+				startTime: data.startTime,
+				endTime: data.endTime,
+				breakMinutes: data.breakMinutes || 0,
 			},
 		});
 
-		revalidatePath(`/dashboard/weekly-periods/${data.weeklyPeriodId}`);
+		console.log("Turno criado com sucesso:", JSON.stringify(shift, null, 2));
 		return { success: true, shift };
 	} catch (error) {
 		console.error("Erro ao criar turno:", error);
-		return { error: "Falha ao registrar turno" };
+		return { error: `Falha ao criar turno: ${error instanceof Error ? error.message : String(error)}` };
 	}
 }
 
@@ -631,26 +661,12 @@ export async function updateShift(shiftId: string, data: z.infer<typeof shiftSch
 		const shift = await prisma.shift.findFirst({
 			where: {
 				id: shiftId,
-				weeklyPeriod: {
-					userId: dbUser.id,
-				},
-			},
-		});
-
-		if (!shift) {
-			return { error: "Turno não encontrado" };
-		}
-
-		// Verificar se o período semanal existe e pertence ao usuário
-		const weeklyPeriod = await prisma.weeklyPeriod.findUnique({
-			where: {
-				id: data.weeklyPeriodId,
 				userId: dbUser.id,
 			},
 		});
 
-		if (!weeklyPeriod) {
-			return { error: "Período semanal não encontrado" };
+		if (!shift) {
+			return { error: "Turno não encontrado ou não pertence ao usuário" };
 		}
 
 		// Calcular o total de ganhos
@@ -661,6 +677,9 @@ export async function updateShift(shiftId: string, data: z.infer<typeof shiftSch
 			where: { id: shiftId },
 			data: {
 				date: data.date,
+				startTime: data.startTime,
+				endTime: data.endTime,
+				breakMinutes: data.breakMinutes || 0,
 				uberEarnings: Number(data.uberEarnings),
 				boltEarnings: Number(data.boltEarnings),
 				otherEarnings: Number(data.otherEarnings || 0),
@@ -674,10 +693,52 @@ export async function updateShift(shiftId: string, data: z.infer<typeof shiftSch
 			},
 		});
 
+		// Revalidar ambas as rotas para garantir que os dados estejam atualizados
 		revalidatePath(`/dashboard/weekly-periods/${data.weeklyPeriodId}`);
+		revalidatePath(`/dashboard/shifts/edit/${shiftId}`);
+		revalidatePath(`/dashboard/shifts/${shiftId}`);
+
 		return { success: true, shift: updatedShift };
 	} catch (error) {
 		console.error("Erro ao atualizar turno:", error);
-		return { error: "Falha ao atualizar turno" };
+		return { error: `Falha ao atualizar turno: ${error instanceof Error ? error.message : String(error)}` };
+	}
+}
+
+/**
+ * Busca todos os turnos de um período semanal específico
+ */
+export async function getShiftsByPeriod(weeklyPeriodId: string) {
+	try {
+		const clerkUser = await currentUser();
+		if (!clerkUser) {
+			return { error: "Usuário não autenticado" };
+		}
+
+		const dbUser = await prisma.user.findUnique({
+			where: { clerkUserId: clerkUser.id },
+		});
+
+		if (!dbUser) {
+			return { error: "Usuário não encontrado no banco de dados" };
+		}
+
+		const shifts = await prisma.shift.findMany({
+			where: {
+				weeklyPeriodId,
+				userId: dbUser.id,
+			},
+			orderBy: {
+				date: "asc",
+			},
+			include: {
+				vehicle: true,
+			},
+		});
+
+		return shifts;
+	} catch (error) {
+		console.error("Erro ao buscar turnos do período:", error);
+		return { error: "Falha ao buscar turnos do período" };
 	}
 }

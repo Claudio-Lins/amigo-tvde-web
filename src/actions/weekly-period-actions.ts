@@ -408,7 +408,7 @@ export async function addWeeklyPeriod(data: WeeklyPeriodFormData) {
 				name: name,
 				startDate: data.startDate,
 				endDate: data.endDate,
-				weeklyGoal: data.weeklyGoal,
+				weeklyGoal: data.weeklyGoal || 0,
 				isActive: data.isActive,
 				userId: dbUser.id,
 			},
@@ -500,5 +500,41 @@ export async function toggleWeeklyPeriodActive(id: string) {
 	} catch (error) {
 		console.error("Erro ao alterar status do período:", error);
 		return { error: "Falha ao alterar status do período" };
+	}
+}
+
+/**
+ * Busca os períodos semanais mais recentes
+ */
+export async function getRecentWeeklyPeriods(limit = 3) {
+	try {
+		const clerkUser = await currentUser();
+		if (!clerkUser) {
+			return { error: "Usuário não autenticado" };
+		}
+
+		const dbUser = await prisma.user.findUnique({
+			where: { clerkUserId: clerkUser.id },
+		});
+
+		if (!dbUser) {
+			return { error: "Usuário não encontrado no banco de dados" };
+		}
+
+		const periods = await prisma.weeklyPeriod.findMany({
+			where: {
+				userId: dbUser.id,
+				isActive: false, // Apenas períodos não ativos (concluídos)
+			},
+			orderBy: {
+				endDate: "desc", // Ordenar pelo mais recente
+			},
+			take: limit, // Limitar a quantidade
+		});
+
+		return periods;
+	} catch (error) {
+		console.error("Erro ao buscar períodos recentes:", error);
+		return { error: "Falha ao buscar períodos recentes" };
 	}
 }

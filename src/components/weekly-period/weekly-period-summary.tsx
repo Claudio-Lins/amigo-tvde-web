@@ -31,7 +31,7 @@ interface WeeklyPeriodWithRelations extends WeeklyPeriod {
 }
 
 interface WeeklyPeriodSummaryProps {
-	weeklyPeriod: WeeklyPeriodWithRelations;
+	weeklyPeriod: any; // Usar tipagem mais genérica
 }
 
 export function WeeklyPeriodSummary({ weeklyPeriod }: WeeklyPeriodSummaryProps) {

@@ -112,10 +112,13 @@ model WeeklyPeriod {
 
 model Shift {
   id              String         @id @default(uuid())
+  startTime       DateTime? // Hora de início do turno
+  endTime         DateTime? // Hora de término do turno
+  breakMinutes    Int? // Tempo de pausa em minutos
   date            DateTime
   uberEarnings    Float          @default(0)
   boltEarnings    Float          @default(0)
-  otherEarnings   Float          @default(0)
+  otherEarnings   Float?         @default(0)
   totalEarnings   Float?
   odometer        Float
   initialOdometer Float?
