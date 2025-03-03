@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 					firstName: first_name ?? "",
 					lastName: last_name ?? "",
 					imageUrl: image_url ?? "",
-					clerkId: id,
+					clerkUserId: id,
 				},
 			});
 

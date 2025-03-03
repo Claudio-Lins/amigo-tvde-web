@@ -223,28 +223,24 @@ model Expense {
 }
 
 model FuelRecord {
-  id        String   @id @default(uuid())
-  date      DateTime
-  amount    Float // Quantidade abastecida (litros ou kWh)
-  price     Float // Preço por unidade (€/litro ou €/kWh)
-  totalCost Float // Custo total
-  odometer  Float // Quilometragem no momento do abastecimento
-  fullTank  Boolean // Se foi tanque cheio
-  location  String? // Local do abastecimento
-  notes     String?
-
-  // Relações com modelos existentes
+  id             String        @id @default(uuid())
+  date           DateTime
+  odometer       Float
+  fuelAmount     Float
+  pricePerUnit   Float
+  totalPrice     Float
+  fullTank       Boolean       @default(true)
+  notes          String?
   vehicleId      String
   vehicle        Vehicle       @relation(fields: [vehicleId], references: [id])
   userId         String
   user           User          @relation(fields: [userId], references: [id])
+  chargingMethod String? // "volume" ou "time"
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  WeeklyPeriod   WeeklyPeriod? @relation(fields: [weeklyPeriodId], references: [id])
   weeklyPeriodId String?
-  weeklyPeriod   WeeklyPeriod? @relation(fields: [weeklyPeriodId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([vehicleId])
   @@index([userId])
-  @@index([weeklyPeriodId])
 }

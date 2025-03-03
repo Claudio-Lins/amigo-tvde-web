@@ -490,7 +490,7 @@ export async function addShift(data: ShiftFormData) {
 	}
 }
 
-export async function createShift(data: ShiftFormData) {
+export async function createShift(data: z.infer<typeof shiftSchema>) {
 	try {
 		console.log("Iniciando criação de turno com dados:", JSON.stringify(data, null, 2));
 
@@ -531,8 +531,13 @@ export async function createShift(data: ShiftFormData) {
 			return { error: "Usuário não encontrado no banco de dados" };
 		}
 
+		// Verificar se o weeklyPeriodId é válido
+		if (!data.weeklyPeriodId) {
+			return { error: "É necessário selecionar um período semanal" };
+		}
+
 		// Verificar se o período semanal existe e pertence ao usuário
-		const weeklyPeriod = await prisma.weeklyPeriod.findUnique({
+		const weeklyPeriod = await prisma.weeklyPeriod.findFirst({
 			where: {
 				id: data.weeklyPeriodId,
 				userId: dbUser.id,
@@ -540,7 +545,7 @@ export async function createShift(data: ShiftFormData) {
 		});
 
 		if (!weeklyPeriod) {
-			return { error: "Período semanal não encontrado" };
+			return { error: "Período semanal não encontrado ou não pertence ao usuário" };
 		}
 
 		// Calcular o total de ganhos

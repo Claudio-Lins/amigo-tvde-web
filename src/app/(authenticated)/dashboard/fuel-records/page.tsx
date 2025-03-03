@@ -49,8 +49,8 @@ export default function FuelRecordsPage() {
 		setIsLoading(true);
 		try {
 			const result = await getFuelRecords();
-			if (result && result.success) {
-				setFuelRecords(result.fuelRecords || []);
+			if (result && !("error" in result)) {
+				setFuelRecords(result);
 			} else {
 				toast.error(result?.error || "Erro ao carregar registros de combustível");
 				setFuelRecords([]);
@@ -126,36 +126,27 @@ export default function FuelRecordsPage() {
 								<TableRow>
 									<TableHead>Data</TableHead>
 									<TableHead>Veículo</TableHead>
+									<TableHead>Odômetro</TableHead>
 									<TableHead>Quantidade</TableHead>
 									<TableHead>Preço</TableHead>
 									<TableHead>Total</TableHead>
-									<TableHead>Odômetro</TableHead>
 									<TableHead className="text-right">Ações</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
 								{fuelRecords.map((record) => (
-									<TableRow key={record.id}>
-										<TableCell>{format(new Date(record.date), "dd/MM/yyyy", { locale: ptBR })}</TableCell>
-										<TableCell>
-											<div className="flex flex-col">
-												<span>
-													{record.vehicle.make} {record.vehicle.model}
-												</span>
-												<Badge variant="outline" className="w-fit">
-													{translateFuelType(record.vehicle.fuelType)}
-												</Badge>
-											</div>
+									<TableRow key={record.id} className="hover:bg-muted/50">
+										<TableCell className="p-2">
+											{format(new Date(record.date), "dd/MM/yyyy", { locale: ptBR })}
 										</TableCell>
-										<TableCell>
-											{record.amount.toFixed(2)} {record.vehicle.fuelType === "ELECTRIC" ? "kWh" : "L"}
+										<TableCell className="p-2">{record.vehicle.name}</TableCell>
+										<TableCell className="p-2">{record.odometer.toFixed(0)} km</TableCell>
+										<TableCell className="p-2">
+											{record.fuelAmount.toFixed(2)} {record.vehicle.fuelType === "ELECTRIC" ? "kWh" : "L"}
 										</TableCell>
-										<TableCell>
-											{formatCurrency(record.price)}/{record.vehicle.fuelType === "ELECTRIC" ? "kWh" : "L"}
-										</TableCell>
-										<TableCell>{formatCurrency(record.totalCost)}</TableCell>
-										<TableCell>{record.odometer.toFixed(1)} km</TableCell>
-										<TableCell className="text-right">
+										<TableCell className="p-2">€ {record.pricePerUnit.toFixed(3)}</TableCell>
+										<TableCell className="p-2">€ {record.totalPrice.toFixed(2)}</TableCell>
+										<TableCell className="p-2 text-right">
 											<div className="flex justify-end gap-2">
 												<Button variant="ghost" size="icon" asChild>
 													<Link href={`/dashboard/fuel-records/${record.id}/edit`}>

@@ -2,7 +2,7 @@
 
 import { createShift } from "@/actions/shift-actions";
 import { getVehicles } from "@/actions/vehicle-actions";
-import { getWeeklyPeriodById } from "@/actions/weekly-period-actions";
+import { getWeeklyPeriods } from "@/actions/weekly-period-actions";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import { shiftSchema } from "@/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, CalendarIcon, ClockIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, CalendarIcon, ClockIcon, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -25,33 +25,25 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-type FormData = z.infer<typeof shiftSchema>;
-
 export default function NewShiftPage() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
-	const periodId = searchParams.get("periodId");
+	const weeklyPeriodId = searchParams.get("weeklyPeriodId");
+	const [vehicles, setVehicles] = useState<any[]>([]);
+	const [weeklyPeriods, setWeeklyPeriods] = useState<any[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [vehicles, setVehicles] = useState<any[]>([]);
-	const [weeklyPeriod, setWeeklyPeriod] = useState<any>(null);
 
-	const form = useForm<FormData>({
+	const form = useForm<z.infer<typeof shiftSchema>>({
 		resolver: zodResolver(shiftSchema),
 		defaultValues: {
 			date: new Date(),
-			startTime: undefined,
-			endTime: undefined,
-			breakMinutes: 0,
 			uberEarnings: 0,
 			boltEarnings: 0,
-			otherEarnings: 0,
-			initialOdometer: 0,
-			finalOdometer: undefined,
 			odometer: 0,
 			vehicleId: "",
 			notes: "",
-			weeklyPeriodId: periodId || "",
+			weeklyPeriodId: weeklyPeriodId || "",
 		},
 	});
 
@@ -60,28 +52,39 @@ export default function NewShiftPage() {
 			try {
 				// Carregar veículos
 				const vehiclesResult = await getVehicles();
-
 				if (vehiclesResult && !("error" in vehiclesResult)) {
 					setVehicles(vehiclesResult);
 
-					// Definir o veículo padrão, se houver
-					const defaultVehicle = vehiclesResult.find((v) => v.isDefault);
-					if (defaultVehicle) {
-						form.setValue("vehicleId", defaultVehicle.id);
-					} else if (vehiclesResult.length > 0) {
+					// Se houver apenas um veículo, selecioná-lo automaticamente
+					if (vehiclesResult.length === 1) {
 						form.setValue("vehicleId", vehiclesResult[0].id);
 					}
 				}
 
-				// Carregar período semanal, se o ID foi fornecido
-				if (periodId) {
-					const periodResult = await getWeeklyPeriodById(periodId);
+				// Carregar períodos semanais
+				const periodsResult = await getWeeklyPeriods();
+				if (periodsResult && !("error" in periodsResult)) {
+					// Filtrar apenas períodos ativos
+					const activePeriods = periodsResult.filter((period) => period.isActive);
+					setWeeklyPeriods(activePeriods);
 
-					if (periodResult && !("error" in periodResult)) {
-						setWeeklyPeriod(periodResult);
-						form.setValue("weeklyPeriodId", periodResult.id);
-					} else {
-						toast.error(periodResult?.error || "Erro ao carregar período semanal");
+					// Se não houver weeklyPeriodId no URL e houver apenas um período ativo, selecioná-lo
+					if (!weeklyPeriodId && activePeriods.length === 1) {
+						form.setValue("weeklyPeriodId", activePeriods[0].id);
+					}
+
+					// Se houver weeklyPeriodId no URL, verificar se é válido
+					if (weeklyPeriodId) {
+						const periodExists = activePeriods.some((period) => period.id === weeklyPeriodId);
+						if (periodExists) {
+							form.setValue("weeklyPeriodId", weeklyPeriodId);
+						} else {
+							// Se o período não existir ou não estiver ativo, selecionar o primeiro ativo
+							if (activePeriods.length > 0) {
+								form.setValue("weeklyPeriodId", activePeriods[0].id);
+								toast.warning("O período semanal selecionado não está disponível. Selecionamos outro período ativo.");
+							}
+						}
 					}
 				}
 			} catch (error) {
@@ -93,27 +96,28 @@ export default function NewShiftPage() {
 		}
 
 		loadData();
-	}, [form, periodId]);
+	}, [form, weeklyPeriodId]);
 
-	async function onSubmit(data: FormData) {
+	async function onSubmit(data: z.infer<typeof shiftSchema>) {
+		// Verificar se weeklyPeriodId está vazio
+		if (!data.weeklyPeriodId) {
+			toast.error("É necessário selecionar um período semanal");
+			return;
+		}
+
+		setIsSubmitting(true);
 		try {
-			setIsSubmitting(true);
-
-			// Log dos dados antes de enviar
-			console.log("Enviando dados:", data);
-
-			// Usar a server action diretamente em vez da API
 			const result = await createShift(data);
 
 			if (result && "success" in result) {
-				toast.success("Turno criado com sucesso!");
+				toast.success("Turno registrado com sucesso!");
 				router.push(`/dashboard/weekly-periods/${data.weeklyPeriodId}`);
 			} else {
-				toast.error(result?.error || "Erro ao criar turno");
+				toast.error(result?.error || "Erro ao registrar turno");
 			}
 		} catch (error) {
-			console.error("Erro ao criar turno:", error);
-			toast.error("Erro ao criar turno");
+			console.error("Erro ao registrar turno:", error);
+			toast.error("Erro ao registrar turno");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -121,11 +125,11 @@ export default function NewShiftPage() {
 
 	// Verificar se a data está dentro do período semanal
 	function isDateWithinPeriod(date: Date) {
-		if (!weeklyPeriod) return true;
+		if (!weeklyPeriods.length) return true;
 
 		return isWithinInterval(date, {
-			start: new Date(weeklyPeriod.startDate),
-			end: new Date(weeklyPeriod.endDate),
+			start: new Date(weeklyPeriods[0].startDate),
+			end: new Date(weeklyPeriods[0].endDate),
 		});
 	}
 
@@ -161,7 +165,7 @@ export default function NewShiftPage() {
 			{/* <div className="max-w-md mx-auto "> */}
 			<div className="flex items-center gap-4 mb-6">
 				<Button variant="outline" size="icon" asChild>
-					<Link href={periodId ? `/dashboard/weekly-periods/${periodId}` : "/dashboard/weekly-periods"}>
+					<Link href={weeklyPeriodId ? `/dashboard/weekly-periods/${weeklyPeriodId}` : "/dashboard/weekly-periods"}>
 						<ArrowLeft className="h-4 w-4" />
 					</Link>
 				</Button>
@@ -172,7 +176,8 @@ export default function NewShiftPage() {
 				<CardHeader>
 					<CardTitle>Detalhes do Turno</CardTitle>
 					<CardDescription>
-						Registre os detalhes do seu turno para o período {weeklyPeriod?.name || "selecionado"}.
+						Registre os detalhes do seu turno para o período{" "}
+						{weeklyPeriods.length > 0 ? weeklyPeriods[0].name : "selecionado"}.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>

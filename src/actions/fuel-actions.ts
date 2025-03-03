@@ -8,7 +8,21 @@ import { ExpenseCategory } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-export async function createFuelRecord(data: z.infer<typeof fuelRecordSchema>) {
+interface FuelRecordData {
+	date: Date;
+	odometer: number;
+	amount: number;
+	price: number;
+	totalCost?: number;
+	fullTank: boolean;
+	notes?: string;
+	vehicleId: string;
+	chargingMethod?: "volume" | "time";
+	location?: string;
+	weeklyPeriodId?: string;
+}
+
+export async function createFuelRecord(data: FuelRecordData) {
 	try {
 		const clerkUser = await currentUser();
 		if (!clerkUser) {
@@ -32,46 +46,27 @@ export async function createFuelRecord(data: z.infer<typeof fuelRecordSchema>) {
 		});
 
 		if (!vehicle) {
-			return { error: "Veículo não encontrado" };
+			return { error: "Veículo não encontrado ou não pertence ao usuário" };
 		}
-
-		// Calcular o custo total se não fornecido
-		const totalCost = data.totalCost || data.amount * data.price;
 
 		// Criar o registro de combustível
 		const fuelRecord = await prisma.fuelRecord.create({
 			data: {
 				date: data.date,
-				amount: data.amount,
-				price: data.price,
-				totalCost,
 				odometer: data.odometer,
+				fuelAmount: data.amount || 0,
+				pricePerUnit: data.price || 0,
+				totalPrice: data.totalCost || 0,
 				fullTank: data.fullTank,
-				location: data.location,
-				notes: data.notes,
+				notes: data.notes || "",
 				vehicleId: data.vehicleId,
 				userId: dbUser.id,
-				weeklyPeriodId: data.weeklyPeriodId,
+				chargingMethod: data.chargingMethod,
 			},
 		});
 
-		// Se tiver um período semanal associado, criar uma despesa correspondente
-		if (data.weeklyPeriodId) {
-			// Criar uma despesa de combustível associada ao período
-			await createExpense({
-				date: data.date,
-				amount: totalCost,
-				category: ExpenseCategory.FUEL,
-				notes: `Abastecimento: ${data.amount.toFixed(2)} ${vehicle.fuelType === "ELECTRIC" ? "kWh" : "L"} - ${data.location || ""}`,
-				weeklyPeriodId: data.weeklyPeriodId,
-			});
-		}
-
-		revalidatePath("/dashboard/consumption");
 		revalidatePath("/dashboard/fuel-records");
-		if (data.weeklyPeriodId) {
-			revalidatePath(`/dashboard/weekly-periods/${data.weeklyPeriodId}`);
-		}
+		revalidatePath("/dashboard/consumption");
 
 		return { success: true, fuelRecord };
 	} catch (error) {
@@ -101,14 +96,13 @@ export async function getFuelRecords() {
 			},
 			include: {
 				vehicle: true,
-				weeklyPeriod: true,
 			},
 			orderBy: {
 				date: "desc",
 			},
 		});
 
-		return { success: true, fuelRecords };
+		return fuelRecords;
 	} catch (error) {
 		console.error("Erro ao buscar registros de combustível:", error);
 		return { error: "Falha ao buscar registros de combustível" };
@@ -137,7 +131,6 @@ export async function getFuelRecordById(id: string) {
 			},
 			include: {
 				vehicle: true,
-				weeklyPeriod: true,
 			},
 		});
 
@@ -199,12 +192,11 @@ export async function updateFuelRecord(id: string, data: z.infer<typeof fuelReco
 			where: { id },
 			data: {
 				date: data.date,
-				amount: data.amount,
-				price: data.price,
-				totalCost,
+				fuelAmount: data.amount,
+				pricePerUnit: data.price,
+				totalPrice: data.totalCost,
 				odometer: data.odometer,
 				fullTank: data.fullTank,
-				location: data.location,
 				notes: data.notes,
 				vehicleId: data.vehicleId,
 				weeklyPeriodId: data.weeklyPeriodId,

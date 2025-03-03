@@ -2,7 +2,6 @@
 
 import { createFuelRecord } from "@/actions/fuel-actions";
 import { getVehicles } from "@/actions/vehicle-actions";
-import { getWeeklyPeriods } from "@/actions/weekly-period-actions";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,386 +9,401 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { fuelRecordSchema } from "@/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { FuelType } from "@prisma/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowLeft, CalendarIcon, Loader2 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-type FormData = z.infer<typeof fuelRecordSchema>;
-
 export default function NewFuelRecordPage() {
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const vehicleId = searchParams.get("vehicleId");
+	const [vehicles, setVehicles] = useState<any[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [vehicles, setVehicles] = useState<any[]>([]);
-	const [weeklyPeriods, setWeeklyPeriods] = useState<any[]>([]);
+	const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+	const [chargingMethod, setChargingMethod] = useState<"volume" | "time">("volume");
 
-	const form = useForm<FormData>({
-		resolver: zodResolver(fuelRecordSchema),
-		defaultValues: {
-			date: new Date(),
-			amount: undefined,
-			price: undefined,
-			totalCost: undefined,
-			odometer: undefined,
-			fullTank: false,
-			location: "",
-			notes: "",
-			vehicleId: "",
-			weeklyPeriodId: "none",
-		},
-	});
-
+	// Carregar veículos
 	useEffect(() => {
-		async function loadData() {
+		async function loadVehicles() {
 			try {
-				setIsLoading(true);
+				const result = await getVehicles();
+				if (result && !("error" in result)) {
+					setVehicles(result);
 
-				// Carregar veículos
-				const vehiclesResult = await getVehicles();
-				if (vehiclesResult && !("error" in vehiclesResult)) {
-					setVehicles(vehiclesResult);
-				}
-
-				// Carregar períodos semanais
-				const periodsResult = await getWeeklyPeriods();
-				if (periodsResult && !("error" in periodsResult)) {
-					setWeeklyPeriods(periodsResult);
+					// Se tiver um vehicleId no URL, selecionar esse veículo
+					if (vehicleId) {
+						const vehicle = result.find((v) => v.id === vehicleId);
+						if (vehicle) {
+							setSelectedVehicle(vehicle);
+							// Se for elétrico, definir método de carregamento como tempo
+							if (vehicle.fuelType === "ELECTRIC") {
+								setChargingMethod("time");
+							}
+						}
+					}
 				}
 			} catch (error) {
-				console.error("Erro ao carregar dados:", error);
-				toast.error("Erro ao carregar dados necessários");
+				console.error("Erro ao carregar veículos:", error);
+				toast.error("Erro ao carregar veículos");
 			} finally {
 				setIsLoading(false);
 			}
 		}
 
-		loadData();
-	}, []);
+		loadVehicles();
+	}, [vehicleId]);
 
-	// Atualizar o custo total quando quantidade ou preço mudar
+	const form = useForm<z.infer<typeof fuelRecordSchema>>({
+		resolver: zodResolver(fuelRecordSchema),
+		defaultValues: {
+			date: new Date(),
+			odometer: 0,
+			amount: 0,
+			price: 0,
+			totalCost: 0,
+			fullTank: true,
+			notes: "",
+			vehicleId: vehicleId || "",
+		},
+	});
+
+	// Atualizar o formulário quando o veículo for selecionado
 	useEffect(() => {
-		const subscription = form.watch((value, { name }) => {
-			if (name === "amount" || name === "price") {
-				const amount = value.amount as number;
-				const price = value.price as number;
+		if (selectedVehicle) {
+			form.setValue("vehicleId", selectedVehicle.id);
 
-				if (amount && price) {
-					form.setValue("totalCost", amount * price);
-				}
+			// Se for elétrico, definir método de carregamento como tempo
+			if (selectedVehicle.fuelType === "ELECTRIC") {
+				setChargingMethod("time");
+			} else {
+				setChargingMethod("volume");
 			}
-		});
+		}
+	}, [selectedVehicle, form]);
 
-		return () => subscription.unsubscribe();
-	}, [form]);
+	// Função para calcular o preço total
+	function calculateTotalPrice() {
+		const fuelAmount = form.getValues("amount");
+		const pricePerUnit = form.getValues("price");
 
-	async function onSubmit(data: FormData) {
+		if (fuelAmount && pricePerUnit) {
+			const totalPrice = fuelAmount * pricePerUnit;
+			form.setValue("totalCost", Number(totalPrice.toFixed(2)));
+		}
+	}
+
+	// Função para calcular a quantidade de combustível a partir do preço total
+	function calculateFuelAmount() {
+		const totalPrice = form.getValues("totalCost");
+		const pricePerUnit = form.getValues("price");
+
+		if (totalPrice && pricePerUnit && pricePerUnit > 0) {
+			const fuelAmount = totalPrice / pricePerUnit;
+			form.setValue("amount", Number(fuelAmount.toFixed(2)));
+		}
+	}
+
+	async function onSubmit(data: z.infer<typeof fuelRecordSchema>) {
+		setIsSubmitting(true);
+
 		try {
-			setIsSubmitting(true);
-
-			// Calcular o custo total se não estiver definido
-			if (!data.totalCost) {
-				data.totalCost = data.amount * data.price;
-			}
-
-			// Tratar o valor "none" como undefined para weeklyPeriodId
-			if (data.weeklyPeriodId === "none") {
-				data.weeklyPeriodId = undefined;
+			// Se for método de tempo para veículo elétrico, converter minutos para kWh estimado
+			if (chargingMethod === "time" && selectedVehicle?.fuelType === "ELECTRIC") {
+				// Aqui estamos mantendo o valor original, mas podemos adicionar uma conversão se necessário
+				// Por exemplo, estimar kWh com base no tempo e potência do carregador
+				// data.fuelAmount = estimateKwhFromMinutes(data.fuelAmount);
 			}
 
 			const result = await createFuelRecord(data);
 
-			if (result.success) {
+			if (result && "success" in result) {
 				toast.success("Registro de combustível adicionado com sucesso");
 				router.push("/dashboard/fuel-records");
 			} else {
-				toast.error(result.error || "Erro ao adicionar registro de combustível");
+				toast.error(result?.error || "Erro ao adicionar registro de combustível");
 			}
 		} catch (error) {
-			console.error("Erro ao adicionar registro de combustível:", error);
+			console.error("Erro ao adicionar registro:", error);
 			toast.error("Erro ao adicionar registro de combustível");
 		} finally {
 			setIsSubmitting(false);
 		}
 	}
 
-	if (isLoading) {
-		return (
-			<div className="container py-10 flex items-center justify-center">
-				<Loader2 className="h-8 w-8 animate-spin text-primary" />
-			</div>
-		);
-	}
-
 	return (
-		<div className="container py-6">
-			<div className="flex items-center mb-6">
-				<Button variant="ghost" size="sm" className="mr-2" asChild>
-					<Link href="/dashboard/fuel-records">
-						<ArrowLeft className="h-4 w-4 mr-2" />
-						Voltar
-					</Link>
-				</Button>
-				<h1 className="text-2xl font-bold">Novo Registro de Combustível</h1>
-			</div>
-
+		<div className="container py-6 space-y-6">
 			<Card>
 				<CardHeader>
-					<CardTitle>Adicionar Registro</CardTitle>
-					<CardDescription>Registre um novo abastecimento de combustível</CardDescription>
+					<CardTitle>Novo Registro de Combustível</CardTitle>
+					<CardDescription>
+						Registre um abastecimento ou carregamento para acompanhar o consumo do seu veículo.
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
 						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-							<FormField
-								control={form.control}
-								name="date"
-								render={({ field }) => (
-									<FormItem className="flex flex-col">
-										<FormLabel>Data</FormLabel>
-										<Popover>
-											<PopoverTrigger asChild>
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+								{/* Veículo */}
+								<FormField
+									control={form.control}
+									name="vehicleId"
+									render={({ field }) => (
+										<FormItem className="md:col-span-2">
+											<FormLabel>Veículo</FormLabel>
+											<Select
+												disabled={isLoading}
+												onValueChange={(value) => {
+													field.onChange(value);
+													const vehicle = vehicles.find((v) => v.id === value);
+													setSelectedVehicle(vehicle);
+												}}
+												value={field.value}
+											>
 												<FormControl>
-													<Button
-														variant={"outline"}
-														className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-													>
-														{field.value ? (
-															format(field.value, "PPP", { locale: ptBR })
-														) : (
-															<span>Selecione uma data</span>
-														)}
-														<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-													</Button>
+													<SelectTrigger>
+														<SelectValue placeholder="Selecione um veículo" />
+													</SelectTrigger>
 												</FormControl>
-											</PopoverTrigger>
-											<PopoverContent className="w-auto p-0" align="start">
-												<Calendar
-													mode="single"
-													selected={field.value}
-													onSelect={field.onChange}
-													disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-													initialFocus
-													locale={ptBR}
-												/>
-											</PopoverContent>
-										</Popover>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="vehicleId"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Veículo</FormLabel>
-										<Select onValueChange={field.onChange} defaultValue={field.value}>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue placeholder="Selecione um veículo" />
-												</SelectTrigger>
-											</FormControl>
-											<SelectContent>
-												{vehicles.map((vehicle) => (
-													<SelectItem key={vehicle.id} value={vehicle.id}>
-														{vehicle.make} {vehicle.model} ({vehicle.year})
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-								<FormField
-									control={form.control}
-									name="amount"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Quantidade</FormLabel>
-											<FormControl>
-												<Input
-													type="number"
-													step="0.01"
-													placeholder="Ex: 40.5"
-													{...field}
-													onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || undefined)}
-												/>
-											</FormControl>
-											<FormDescription>Litros ou kWh</FormDescription>
+												<SelectContent>
+													{vehicles.map((vehicle) => (
+														<SelectItem key={vehicle.id} value={vehicle.id}>
+															{vehicle.make} {vehicle.model} ({vehicle.licensePlate})
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
 											<FormMessage />
 										</FormItem>
 									)}
 								/>
 
+								{/* Data */}
 								<FormField
 									control={form.control}
-									name="price"
+									name="date"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Preço por unidade</FormLabel>
-											<FormControl>
-												<Input
-													type="number"
-													step="0.001"
-													placeholder="Ex: 1.899"
-													{...field}
-													onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || undefined)}
-												/>
-											</FormControl>
-											<FormDescription>€ por litro ou kWh</FormDescription>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-								<FormField
-									control={form.control}
-									name="totalCost"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Custo Total</FormLabel>
-											<FormControl>
-												<Input
-													type="number"
-													step="0.01"
-													placeholder="Calculado automaticamente"
-													{...field}
-													onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || undefined)}
-												/>
-											</FormControl>
-											<FormDescription>Calculado automaticamente (pode ser ajustado)</FormDescription>
+											<FormLabel>Data</FormLabel>
+											<Popover>
+												<PopoverTrigger asChild>
+													<FormControl>
+														<Button
+															variant={"outline"}
+															className={cn(
+																"w-full pl-3 text-left font-normal",
+																!field.value && "text-muted-foreground",
+															)}
+														>
+															{field.value ? (
+																format(field.value, "PPP", { locale: ptBR })
+															) : (
+																<span>Selecione uma data</span>
+															)}
+															<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+														</Button>
+													</FormControl>
+												</PopoverTrigger>
+												<PopoverContent className="w-auto p-0" align="start">
+													<Calendar
+														mode="single"
+														selected={field.value}
+														onSelect={field.onChange}
+														disabled={(date) => date > new Date()}
+														initialFocus
+													/>
+												</PopoverContent>
+											</Popover>
 											<FormMessage />
 										</FormItem>
 									)}
 								/>
 
+								{/* Odômetro */}
 								<FormField
 									control={form.control}
 									name="odometer"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Quilometragem</FormLabel>
+											<FormLabel>Odômetro (km)</FormLabel>
 											<FormControl>
 												<Input
-													type="number"
-													step="0.1"
-													placeholder="Ex: 12345.6"
 													{...field}
-													onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || undefined)}
+													type="number"
+													min={0}
+													step={0.1}
+													onChange={(e) => field.onChange(Number(e.target.value))}
 												/>
 											</FormControl>
-											<FormDescription>Odômetro no momento do abastecimento</FormDescription>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Método de Carregamento (apenas para veículos elétricos) */}
+								{selectedVehicle?.fuelType === "ELECTRIC" && (
+									<div className="md:col-span-2">
+										<FormLabel>Método de Carregamento</FormLabel>
+										<RadioGroup
+											value={chargingMethod}
+											onValueChange={(value) => setChargingMethod(value as "volume" | "time")}
+											className="flex space-x-4 mt-2"
+										>
+											<div className="flex items-center space-x-2">
+												<RadioGroupItem value="volume" id="volume" />
+												<label htmlFor="volume">kWh (energia)</label>
+											</div>
+											<div className="flex items-center space-x-2">
+												<RadioGroupItem value="time" id="time" />
+												<label htmlFor="time">Minutos (tempo)</label>
+											</div>
+										</RadioGroup>
+									</div>
+								)}
+
+								{/* Quantidade de Combustível */}
+								<FormField
+									control={form.control}
+									name="amount"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>
+												{selectedVehicle?.fuelType === "ELECTRIC"
+													? chargingMethod === "time"
+														? "Tempo de Carregamento (min)"
+														: "Energia (kWh)"
+													: "Quantidade (litros)"}
+											</FormLabel>
+											<FormControl>
+												<Input
+													{...field}
+													type="number"
+													min={0}
+													step={0.01}
+													onChange={(e) => {
+														field.onChange(Number(e.target.value));
+														calculateTotalPrice();
+													}}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Preço por Unidade */}
+								<FormField
+									control={form.control}
+									name="price"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>
+												{selectedVehicle?.fuelType === "ELECTRIC"
+													? chargingMethod === "time"
+														? "Preço por Minuto (€)"
+														: "Preço por kWh (€)"
+													: "Preço por Litro (€)"}
+											</FormLabel>
+											<FormControl>
+												<Input
+													{...field}
+													type="number"
+													min={0}
+													step={0.001}
+													onChange={(e) => {
+														field.onChange(Number(e.target.value));
+														calculateTotalPrice();
+													}}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Preço Total */}
+								<FormField
+									control={form.control}
+									name="totalCost"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Preço Total (€)</FormLabel>
+											<FormControl>
+												<Input
+													{...field}
+													type="number"
+													min={0}
+													step={0.01}
+													onChange={(e) => {
+														field.onChange(Number(e.target.value));
+														calculateFuelAmount();
+													}}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Tanque Cheio */}
+								<FormField
+									control={form.control}
+									name="fullTank"
+									render={({ field }) => (
+										<FormItem className="flex flex-row items-start space-x-3 space-y-0 md:col-span-2">
+											<FormControl>
+												<Checkbox checked={field.value} onCheckedChange={field.onChange} />
+											</FormControl>
+											<div className="space-y-1 leading-none">
+												<FormLabel>
+													{selectedVehicle?.fuelType === "ELECTRIC" ? "Carregamento completo" : "Tanque cheio"}
+												</FormLabel>
+												<FormDescription>
+													{selectedVehicle?.fuelType === "ELECTRIC"
+														? "Marque se o veículo foi carregado até 100%"
+														: "Marque se o tanque foi completamente abastecido"}
+												</FormDescription>
+											</div>
+										</FormItem>
+									)}
+								/>
+
+								{/* Observações */}
+								<FormField
+									control={form.control}
+									name="notes"
+									render={({ field }) => (
+										<FormItem className="md:col-span-2">
+											<FormLabel>Observações</FormLabel>
+											<FormControl>
+												<Textarea {...field} placeholder="Observações sobre o abastecimento (opcional)" />
+											</FormControl>
 											<FormMessage />
 										</FormItem>
 									)}
 								/>
 							</div>
 
-							<FormField
-								control={form.control}
-								name="weeklyPeriodId"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Período Semanal (opcional)</FormLabel>
-										<Select onValueChange={field.onChange} defaultValue={field.value}>
-											<FormControl>
-												<SelectTrigger>
-													<SelectValue placeholder="Selecione um período (opcional)" />
-												</SelectTrigger>
-											</FormControl>
-											<SelectContent>
-												<SelectItem value="none">Nenhum</SelectItem>
-												{weeklyPeriods.map((period) => (
-													<SelectItem key={period.id} value={period.id}>
-														{period.name || format(new Date(period.startDate), "dd/MM/yyyy")} -{" "}
-														{format(new Date(period.endDate), "dd/MM/yyyy")}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-										<FormDescription>
-											Associar a um período semanal. Uma despesa de combustível será criada automaticamente.
-										</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="fullTank"
-								render={({ field }) => (
-									<FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-										<FormControl>
-											<Checkbox checked={field.value} onCheckedChange={field.onChange} />
-										</FormControl>
-										<div className="space-y-1 leading-none">
-											<FormLabel>Tanque Cheio</FormLabel>
-											<FormDescription>Marque esta opção se o tanque foi completamente abastecido</FormDescription>
-										</div>
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="location"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Local</FormLabel>
-										<FormControl>
-											<Input {...field} placeholder="Ex: Posto XYZ" />
-										</FormControl>
-										<FormDescription>Onde foi realizado o abastecimento (opcional)</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="notes"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Observações</FormLabel>
-										<FormControl>
-											<Textarea
-												{...field}
-												placeholder="Detalhes adicionais sobre o abastecimento"
-												className="resize-none"
-											/>
-										</FormControl>
-										<FormDescription>Opcional</FormDescription>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
 							<Button type="submit" disabled={isSubmitting} className="w-full">
 								{isSubmitting ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Adicionando...
+										Registrando...
 									</>
 								) : (
-									"Adicionar Registro"
+									"Registrar Abastecimento"
 								)}
 							</Button>
 						</form>

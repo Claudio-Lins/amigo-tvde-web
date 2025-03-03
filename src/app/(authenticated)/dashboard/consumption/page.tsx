@@ -24,7 +24,7 @@ function formatCurrency(value: number): string {
 }
 
 function formatNumber(value: number, decimals = 2): string {
-	return value.toFixed(decimals);
+	return value?.toFixed(decimals);
 }
 
 export default function ConsumptionDashboardPage() {

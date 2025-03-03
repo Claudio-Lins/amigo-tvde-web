@@ -67,12 +67,11 @@ export default function EditFuelRecordPage() {
 					// Preencher o formulário com os dados do registro
 					form.reset({
 						date: new Date(recordResult.fuelRecord.date),
-						amount: recordResult.fuelRecord.amount,
-						price: recordResult.fuelRecord.price,
-						totalCost: recordResult.fuelRecord.totalCost,
+						amount: recordResult.fuelRecord.fuelAmount,
+						price: recordResult.fuelRecord.pricePerUnit,
+						totalCost: recordResult.fuelRecord.totalPrice,
 						odometer: recordResult.fuelRecord.odometer,
 						fullTank: recordResult.fuelRecord.fullTank,
-						location: recordResult.fuelRecord.location || "",
 						notes: recordResult.fuelRecord.notes || "",
 						vehicleId: recordResult.fuelRecord.vehicleId,
 						weeklyPeriodId: recordResult.fuelRecord.weeklyPeriodId || "none",
