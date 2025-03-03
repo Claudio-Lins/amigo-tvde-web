@@ -601,11 +601,11 @@ export default function EditShiftPage() {
 								)}
 							</div>
 
-							<div className="flex items-center gap-2 mt-2">
+							{/* <div className="flex items-center gap-2 mt-2">
 								<Button type="button" variant="outline" size="sm" onClick={calculateOdometer}>
 									Calcular Quilometragem Total
 								</Button>
-							</div>
+							</div> */}
 
 							<Button type="submit" disabled={isSubmitting} className="w-full">
 								{isSubmitting ? (

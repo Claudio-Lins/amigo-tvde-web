@@ -21,7 +21,7 @@ import {
 
 // Estender a interface Shift para incluir otherEarnings
 interface ExtendedShift extends Shift {
-	otherEarnings?: number;
+	otherEarnings: number | null;
 }
 
 // Atualizar a interface WeeklyPeriodWithRelations
@@ -31,7 +31,7 @@ interface WeeklyPeriodWithRelations extends WeeklyPeriod {
 }
 
 interface WeeklyPeriodSummaryProps {
-	weeklyPeriod: any; // Usar tipagem mais genérica
+	weeklyPeriod: WeeklyPeriodWithRelations;
 }
 
 export function WeeklyPeriodSummary({ weeklyPeriod }: WeeklyPeriodSummaryProps) {
@@ -40,14 +40,14 @@ export function WeeklyPeriodSummary({ weeklyPeriod }: WeeklyPeriodSummaryProps) 
 	const expenses = weeklyPeriod.Expense || [];
 
 	const totalDays = differenceInDays(new Date(weeklyPeriod.endDate), new Date(weeklyPeriod.startDate)) + 1;
-	const daysWithShifts = new Set(shifts.map((shift) => format(new Date(shift.date), "yyyy-MM-dd"))).size;
+	const daysWithShifts = new Set(shifts.map((shift: ExtendedShift) => format(new Date(shift.date), "yyyy-MM-dd"))).size;
 
 	const totalEarnings = shifts.reduce(
-		(sum, shift) => sum + shift.uberEarnings + shift.boltEarnings + (shift.otherEarnings || 0),
+		(sum: number, shift: ExtendedShift) => sum + shift.uberEarnings + shift.boltEarnings + (shift.otherEarnings || 0),
 		0,
 	);
 
-	const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+	const totalExpenses = expenses.reduce((sum: number, expense: Expense) => sum + expense.amount, 0);
 	const netEarnings = totalEarnings - totalExpenses;
 
 	const uberEarnings = shifts.reduce((sum, shift) => sum + shift.uberEarnings, 0);
@@ -242,8 +242,11 @@ export function WeeklyPeriodSummary({ weeklyPeriod }: WeeklyPeriodSummaryProps) 
 										fill="#8884d8"
 										dataKey="value"
 									>
-										{expensesByCategory.map((entry, index) => (
-											<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+										{expensesByCategory.map((entry) => (
+											<Cell
+												key={`cell-${entry.name}`}
+												fill={COLORS[expensesByCategory.indexOf(entry) % COLORS.length]}
+											/>
 										))}
 									</Pie>
 									<Tooltip formatter={(value) => formatCurrency(value as number)} />
