@@ -182,7 +182,7 @@ export default function NewShiftPage() {
 	}
 
 	return (
-		<div className="container py-10">
+		<div className="container py-10 md:py-0">
 			{/* <div className="max-w-md mx-auto "> */}
 			<div className="flex items-center gap-4 mb-6">
 				<Button variant="outline" size="icon" asChild>
@@ -289,71 +289,8 @@ export default function NewShiftPage() {
 									/>
 								</div>
 
-								{/* Ganhos */}
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-									<FormField
-										control={form.control}
-										name="uberEarnings"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Ganhos Uber (€)</FormLabel>
-												<FormControl>
-													<Input
-														{...field}
-														type="number"
-														min={0}
-														step={0.01}
-														onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || 0)}
-													/>
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-
-									<FormField
-										control={form.control}
-										name="boltEarnings"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Ganhos Bolt (€)</FormLabel>
-												<FormControl>
-													<Input
-														{...field}
-														type="number"
-														min={0}
-														step={0.01}
-														onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || 0)}
-													/>
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-
-									<FormField
-										control={form.control}
-										name="otherEarnings"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Outros Ganhos (€)</FormLabel>
-												<FormControl>
-													<Input
-														{...field}
-														type="number"
-														min={0}
-														step={0.01}
-														onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || 0)}
-													/>
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-								</div>
-
 								{/* Quilometragem */}
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
 									<FormField
 										control={form.control}
 										name="initialOdometer"
@@ -364,7 +301,7 @@ export default function NewShiftPage() {
 													<Input
 														{...field}
 														type="number"
-														min={0}
+														// min={0}
 														step={0.1}
 														onChange={(e) => {
 															const value = Number.parseFloat(e.target.value) || 0;
@@ -393,7 +330,7 @@ export default function NewShiftPage() {
 													<Input
 														{...field}
 														type="number"
-														min={0}
+														// min={0}
 														step={0.1}
 														value={field.value === null ? "" : field.value}
 														onChange={(e) => {
@@ -408,7 +345,9 @@ export default function NewShiftPage() {
 														}}
 													/>
 												</FormControl>
-												<FormDescription>Deixe em branco para preencher posteriormente</FormDescription>
+												<FormDescription className="text-xs">
+													Deixe em branco para preencher posteriormente
+												</FormDescription>
 												<FormMessage />
 											</FormItem>
 										)}
@@ -424,9 +363,72 @@ export default function NewShiftPage() {
 													<Input
 														{...field}
 														type="number"
-														min={0}
+														// min={0}
 														step={0.1}
 														onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || 0)}
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								</div>
+
+								{/* Ganhos */}
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+									<FormField
+										control={form.control}
+										name="uberEarnings"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Ganhos Uber (€)</FormLabel>
+												<FormControl>
+													<Input
+														{...field}
+														type="number"
+														// min={0}
+														step={0.01}
+														onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || 0)}
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+
+									<FormField
+										control={form.control}
+										name="boltEarnings"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Ganhos Bolt (€)</FormLabel>
+												<FormControl>
+													<Input
+														{...field}
+														type="number"
+														// min={0}
+														step={0.01}
+														onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || null)}
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+
+									<FormField
+										control={form.control}
+										name="otherEarnings"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Outros Ganhos (€)</FormLabel>
+												<FormControl>
+													<Input
+														{...field}
+														type="number"
+														// min={0}
+														step={0.01}
+														onChange={(e) => field.onChange(Number.parseFloat(e.target.value) || null)}
 													/>
 												</FormControl>
 												<FormMessage />
@@ -451,11 +453,11 @@ export default function NewShiftPage() {
 								/>
 							</div>
 
-							<div className="flex items-center gap-2 mt-2">
+							{/* <div className="flex items-center gap-2 mt-2">
 								<Button type="button" variant="outline" size="sm" onClick={calculateOdometer}>
 									Calcular Quilometragem Total
 								</Button>
-							</div>
+							</div> */}
 
 							<Button type="submit" disabled={isSubmitting} className="w-full">
 								{isSubmitting ? (

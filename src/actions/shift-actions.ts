@@ -96,6 +96,8 @@ export async function startShift(data: StartShiftWithExpensesAndIncomes) {
 			},
 		});
 
+		const vehicleExpenses = vehicle?.ownership === "RENTED" && vehicle?.weeklyRent;
+
 		// Adicionar despesas, se houver
 		if (data.expenses && data.expenses.length > 0) {
 			const expensePromises = data.expenses.map(async (expense) => {

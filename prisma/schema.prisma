@@ -68,6 +68,7 @@ model User {
   goals         UserGoal[]
   fixedExpenses FixedExpense[]
   weeklyPeriods WeeklyPeriod[]
+  fuelRecords   FuelRecord[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -90,21 +91,23 @@ model Vehicle {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   Shift          Shift[]
+  fuelRecords    FuelRecord[]
 }
 
 model WeeklyPeriod {
-  id         String    @id @default(uuid())
-  name       String?
-  startDate  DateTime
-  endDate    DateTime
-  weeklyGoal Float // Adicionando este campo
-  isActive   Boolean   @default(false)
-  userId     String
-  user       User      @relation(fields: [userId], references: [id])
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  Shift      Shift[]
-  Expense    Expense[]
+  id          String       @id @default(uuid())
+  name        String?
+  startDate   DateTime
+  endDate     DateTime
+  weeklyGoal  Float // Adicionando este campo
+  isActive    Boolean      @default(false)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  Shift       Shift[]
+  Expense     Expense[]
+  fuelRecords FuelRecord[]
 }
 
 model Shift {
@@ -213,5 +216,32 @@ model Expense {
 
   @@index([userId])
   @@index([shiftId])
+  @@index([weeklyPeriodId])
+}
+
+model FuelRecord {
+  id        String   @id @default(uuid())
+  date      DateTime
+  amount    Float // Quantidade abastecida (litros ou kWh)
+  price     Float // Preço por unidade (€/litro ou €/kWh)
+  totalCost Float // Custo total
+  odometer  Float // Quilometragem no momento do abastecimento
+  fullTank  Boolean // Se foi tanque cheio
+  location  String? // Local do abastecimento
+  notes     String?
+
+  // Relações com modelos existentes
+  vehicleId      String
+  vehicle        Vehicle       @relation(fields: [vehicleId], references: [id])
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  weeklyPeriodId String?
+  weeklyPeriod   WeeklyPeriod? @relation(fields: [weeklyPeriodId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vehicleId])
+  @@index([userId])
   @@index([weeklyPeriodId])
 }

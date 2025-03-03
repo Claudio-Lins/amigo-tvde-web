@@ -6,7 +6,7 @@ import Link from "next/link";
 
 export default function NewWeeklyPeriodPage() {
 	return (
-		<div className="container py-6 space-y-6">
+		<div className="container py-6 md:py-0 space-y-6">
 			<div className="flex items-center">
 				<Button variant="ghost" size="icon" asChild className="mr-2">
 					<Link href="/dashboard/weekly-periods">

@@ -40,7 +40,7 @@ export function AddWeeklyPeriodForm() {
 			name: `Semana ${weekNumber}/${year}`,
 			startDate: defaultStartDate,
 			endDate: defaultEndDate,
-			weeklyGoal: 1000,
+			weeklyGoal: 400,
 			isActive: true,
 		},
 	});
@@ -193,9 +193,10 @@ export function AddWeeklyPeriodForm() {
 								<Input
 									{...field}
 									type="number"
-									min={0}
-									step={50}
-									onChange={(e) => field.onChange(parseFloat(e.target.value))}
+									// min={0}
+									// step={50}
+									placeholder="400"
+									onChange={(e) => field.onChange(Number.parseFloat(e.target.value))}
 								/>
 							</FormControl>
 							<FormDescription>Defina uma meta de ganhos para esta semana.</FormDescription>

@@ -157,5 +157,19 @@ export const shiftSchema = z
 		},
 	);
 
+export const fuelRecordSchema = z.object({
+	date: z.date(),
+	amount: z.number().positive("A quantidade deve ser maior que zero"),
+	price: z.number().positive("O preço deve ser maior que zero"),
+	totalCost: z.number().optional(),
+	odometer: z.number().positive("A quilometragem deve ser maior que zero"),
+	fullTank: z.boolean().default(false),
+	location: z.string().optional(),
+	notes: z.string().optional(),
+	vehicleId: z.string().min(1, "Selecione um veículo"),
+	weeklyPeriodId: z.string().optional(),
+});
+
 export type ShiftFormData = z.infer<typeof shiftSchema>;
 export type ExpenseFormData = z.infer<typeof expenseSchema>;
+export type FuelRecordFormData = z.infer<typeof fuelRecordSchema>;

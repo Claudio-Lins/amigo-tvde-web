@@ -2,7 +2,19 @@
 
 import { cn } from "@/lib/utils";
 import { SignOutButton } from "@clerk/nextjs";
-import { Calendar, Car, CreditCard, Home, LineChart, LogOut, Menu, Settings, X } from "lucide-react";
+import {
+	Calendar,
+	Car,
+	CreditCard,
+	DropletIcon,
+	Home,
+	LineChart,
+	LineChartIcon,
+	LogOut,
+	Menu,
+	Settings,
+	X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -38,6 +50,16 @@ const menuItems = [
 		title: "Configurações",
 		href: "/dashboard/settings",
 		icon: Settings,
+	},
+	{
+		title: "Combustível",
+		href: "/dashboard/fuel-records",
+		icon: DropletIcon,
+	},
+	{
+		title: "Consumo",
+		href: "/dashboard/consumption",
+		icon: LineChartIcon,
 	},
 ];
 
@@ -165,7 +187,7 @@ export function Sidebar() {
 									)}
 									onClick={() => setMobileOpen(false)}
 								>
-									<item.icon className="h-5 w-5 mr-3" />
+									{/* <item.icon className="h-5 w-5 mr-3" /> */}
 									<span>{item.title}</span>
 								</Link>
 							))}

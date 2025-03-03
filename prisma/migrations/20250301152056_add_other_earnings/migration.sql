@@ -1,3 +1,0 @@
--- AlterTable
-ALTER TABLE "Shift" ADD COLUMN     "otherEarnings" DOUBLE PRECISION NOT NULL DEFAULT 0,
-ADD COLUMN     "totalEarnings" DOUBLE PRECISION;
