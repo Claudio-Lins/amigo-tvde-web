@@ -86,7 +86,6 @@ export default function NewFuelRecordPage() {
 	const form = useForm<z.infer<typeof fuelRecordSchema>>({
 		resolver: zodResolver(fuelRecordSchema),
 		defaultValues: {
-			date: new Date(),
 			odometer: 0,
 			amount: 0,
 			price: 0,
@@ -234,47 +233,6 @@ export default function NewFuelRecordPage() {
 												</SelectContent>
 											</Select>
 											<FormDescription>Selecione o turno ao qual este abastecimento está associado</FormDescription>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								{/* Data */}
-								<FormField
-									control={form.control}
-									name="date"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Data</FormLabel>
-											<Popover>
-												<PopoverTrigger asChild>
-													<FormControl>
-														<Button
-															variant={"outline"}
-															className={cn(
-																"w-full pl-3 text-left font-normal",
-																!field.value && "text-muted-foreground",
-															)}
-														>
-															{field.value ? (
-																format(field.value, "PPP", { locale: ptBR })
-															) : (
-																<span>Selecione uma data</span>
-															)}
-															<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-														</Button>
-													</FormControl>
-												</PopoverTrigger>
-												<PopoverContent className="w-auto p-0" align="start">
-													<Calendar
-														mode="single"
-														selected={field.value}
-														onSelect={field.onChange}
-														disabled={(date) => date > new Date()}
-														initialFocus
-													/>
-												</PopoverContent>
-											</Popover>
 											<FormMessage />
 										</FormItem>
 									)}

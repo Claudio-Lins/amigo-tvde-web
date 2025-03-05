@@ -46,19 +46,18 @@ model Vehicle {
 }
 
 model WeeklyPeriod {
-  id          String       @id @default(uuid())
-  name        String?
-  startDate   DateTime
-  endDate     DateTime
-  weeklyGoal  Float
-  isActive    Boolean      @default(false)
-  userId      String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  Expense     Expense[]
-  fuelRecords FuelRecord[]
-  Shift       Shift[]
-  user        User         @relation(fields: [userId], references: [id])
+  id         String    @id @default(uuid())
+  name       String?
+  startDate  DateTime
+  endDate    DateTime
+  weeklyGoal Float
+  isActive   Boolean   @default(false)
+  userId     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  Expense    Expense[]
+  Shift      Shift[]
+  user       User      @relation(fields: [userId], references: [id])
 }
 
 model Shift {
@@ -178,14 +177,12 @@ model FuelRecord {
   chargingMethod String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  weeklyPeriodId String?
-  shiftId        String
   shiftExpenseId String?       @unique
   shiftExpense   ShiftExpense? @relation(fields: [shiftExpenseId], references: [id])
+  shiftId        String
   shift          Shift         @relation(fields: [shiftId], references: [id])
   user           User          @relation(fields: [userId], references: [id])
   vehicle        Vehicle       @relation(fields: [vehicleId], references: [id])
-  WeeklyPeriod   WeeklyPeriod? @relation(fields: [weeklyPeriodId], references: [id])
 
   @@index([vehicleId])
   @@index([userId])

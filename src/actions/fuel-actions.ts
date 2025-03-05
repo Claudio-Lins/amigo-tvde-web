@@ -9,7 +9,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 interface FuelRecordData {
-	date: Date;
 	odometer: number;
 	amount: number;
 	price: number;
@@ -87,7 +86,7 @@ export async function createFuelRecord(data: FuelRecordData) {
 		// Criar o registro de combustível associado à despesa
 		const fuelRecord = await prisma.fuelRecord.create({
 			data: {
-				date: data.date,
+				date: shift.date,
 				odometer: data.odometer,
 				fuelAmount: data.amount || 0,
 				pricePerUnit: data.price || 0,

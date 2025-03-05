@@ -28,9 +28,6 @@ export const shiftSchema = z.object({
 });
 
 export const fuelRecordSchema = z.object({
-	date: z.date({
-		required_error: "A data é obrigatória",
-	}),
 	odometer: z.number().min(0, "A quilometragem não pode ser negativa"),
 	amount: z.number().min(0, "A quantidade não pode ser negativa"),
 	price: z.number().min(0, "O preço não pode ser negativo"),
@@ -38,5 +35,6 @@ export const fuelRecordSchema = z.object({
 	fullTank: z.boolean().default(true),
 	notes: z.string().optional(),
 	vehicleId: z.string(),
+	shiftId: z.string().min(1, "É necessário selecionar um turno"),
 	chargingMethod: z.enum(["volume", "time"]).optional(),
 });
