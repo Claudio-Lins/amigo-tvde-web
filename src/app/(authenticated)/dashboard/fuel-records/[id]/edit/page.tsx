@@ -1,8 +1,8 @@
 "use client";
 
 import { getFuelRecordById, updateFuelRecord } from "@/actions/fuel-actions";
+import { getUserShifts } from "@/actions/shift-actions";
 import { getVehicles } from "@/actions/vehicle-actions";
-import { getWeeklyPeriods } from "@/actions/weekly-period-actions";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +35,7 @@ export default function EditFuelRecordPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [vehicles, setVehicles] = useState<any[]>([]);
-	const [weeklyPeriods, setWeeklyPeriods] = useState<any[]>([]);
+	const [shifts, setShifts] = useState<any[]>([]);
 	const [fuelRecord, setFuelRecord] = useState<any>(null);
 
 	const form = useForm<FormData>({
@@ -50,7 +50,7 @@ export default function EditFuelRecordPage() {
 			location: "",
 			notes: "",
 			vehicleId: "",
-			weeklyPeriodId: "none",
+			shiftId: "",
 		},
 	});
 
@@ -74,7 +74,7 @@ export default function EditFuelRecordPage() {
 						fullTank: recordResult.fuelRecord.fullTank,
 						notes: recordResult.fuelRecord.notes || "",
 						vehicleId: recordResult.fuelRecord.vehicleId,
-						weeklyPeriodId: recordResult.fuelRecord.weeklyPeriodId || "none",
+						shiftId: recordResult.fuelRecord.shiftId || "",
 					});
 				} else {
 					toast.error(recordResult.error || "Erro ao carregar registro de combustível");
@@ -88,10 +88,10 @@ export default function EditFuelRecordPage() {
 					setVehicles(vehiclesResult);
 				}
 
-				// Carregar períodos semanais
-				const periodsResult = await getWeeklyPeriods();
-				if (periodsResult && !("error" in periodsResult)) {
-					setWeeklyPeriods(periodsResult);
+				// Carregar turnos
+				const shiftsResult = await getUserShifts();
+				if (shiftsResult && !("error" in shiftsResult)) {
+					setShifts(shiftsResult);
 				}
 			} catch (error) {
 				console.error("Erro ao carregar dados:", error);
@@ -127,11 +127,6 @@ export default function EditFuelRecordPage() {
 			// Calcular o custo total se não estiver definido
 			if (!data.totalCost) {
 				data.totalCost = data.amount * data.price;
-			}
-
-			// Tratar o valor "none" como undefined para weeklyPeriodId
-			if (data.weeklyPeriodId === "none") {
-				data.weeklyPeriodId = undefined;
 			}
 
 			const result = await updateFuelRecord(id, data);
@@ -331,29 +326,24 @@ export default function EditFuelRecordPage() {
 
 							<FormField
 								control={form.control}
-								name="weeklyPeriodId"
+								name="shiftId"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Período Semanal (opcional)</FormLabel>
+										<FormLabel>Turno</FormLabel>
 										<Select onValueChange={field.onChange} defaultValue={field.value}>
 											<FormControl>
 												<SelectTrigger>
-													<SelectValue placeholder="Selecione um período (opcional)" />
+													<SelectValue placeholder="Selecione um turno" />
 												</SelectTrigger>
 											</FormControl>
 											<SelectContent>
-												<SelectItem value="none">Nenhum</SelectItem>
-												{weeklyPeriods.map((period) => (
-													<SelectItem key={period.id} value={period.id}>
-														{period.name || format(new Date(period.startDate), "dd/MM/yyyy")} -{" "}
-														{format(new Date(period.endDate), "dd/MM/yyyy")}
+												{shifts.map((shift) => (
+													<SelectItem key={shift.id} value={shift.id}>
+														{format(new Date(shift.date), "dd/MM/yyyy")} - {shift.vehicle?.make} {shift.vehicle?.model}
 													</SelectItem>
 												))}
 											</SelectContent>
 										</Select>
-										<FormDescription>
-											Associar a um período semanal. Uma despesa de combustível será criada automaticamente.
-										</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}

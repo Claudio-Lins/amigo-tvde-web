@@ -3,7 +3,7 @@ import { z } from "zod";
 
 export const vehicleSchema = z
 	.object({
-		make: z.string().min(1, "Marca é obrigatória"),
+		brand: z.string().min(1, "Marca é obrigatória"),
 		model: z.string().min(1, "Modelo é obrigatório"),
 		year: z
 			.number()
@@ -170,7 +170,7 @@ export const fuelRecordSchema = z.object({
 	location: z.string().optional(),
 	notes: z.string().optional(),
 	vehicleId: z.string().min(1, "Selecione um veículo"),
-	weeklyPeriodId: z.string().optional(),
+	shiftId: z.string().min(1, "Selecione um turno"),
 });
 
 export type ShiftFormData = z.infer<typeof shiftSchema>;

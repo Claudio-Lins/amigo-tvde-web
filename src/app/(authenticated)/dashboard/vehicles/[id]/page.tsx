@@ -164,7 +164,7 @@ export default function VehicleDetailsPage() {
 					</Link>
 				</Button>
 				<h1 className="text-2xl font-bold">
-					{vehicle.make} {vehicle.model} ({vehicle.year})
+					{vehicle.brand} {vehicle.model} ({vehicle.year})
 				</h1>
 				{vehicle.isDefault && (
 					<Badge variant="secondary" className="flex items-center gap-1">
@@ -184,7 +184,7 @@ export default function VehicleDetailsPage() {
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 							<div>
 								<h3 className="text-sm font-medium text-muted-foreground">Marca</h3>
-								<p className="text-lg">{vehicle.make}</p>
+								<p className="text-lg">{vehicle.brand}</p>
 							</div>
 							<div>
 								<h3 className="text-sm font-medium text-muted-foreground">Modelo</h3>

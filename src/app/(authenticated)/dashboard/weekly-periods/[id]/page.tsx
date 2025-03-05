@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WeeklyPeriodFuelReport } from "@/components/weekly-period/weekly-period-fuel-report";
 import { WeeklyPeriodSummary } from "@/components/weekly-period/weekly-period-summary";
 import { WeeklyTimeReport } from "@/components/weekly-period/weekly-time-report";
 import { Expense, Shift, WeeklyPeriod } from "@prisma/client";
@@ -273,6 +274,9 @@ export default function WeeklyPeriodDetailsPage() {
 					<TabsTrigger className="w-full cursor-pointer" value="time">
 						Horários
 					</TabsTrigger>
+					<TabsTrigger className="w-full cursor-pointer" value="fuel">
+						Combustível
+					</TabsTrigger>
 					<TabsTrigger className="w-full cursor-pointer" value="summary">
 						Resumo
 					</TabsTrigger>
@@ -347,6 +351,18 @@ export default function WeeklyPeriodDetailsPage() {
 									</p>
 								</div>
 							)}
+						</CardContent>
+					</Card>
+				</TabsContent>
+
+				<TabsContent value="fuel" className="mt-4">
+					<Card>
+						<CardHeader>
+							<CardTitle>Relatório de Combustível</CardTitle>
+							<CardDescription>Análise de consumo e custos de combustível neste período.</CardDescription>
+						</CardHeader>
+						<CardContent>
+							<WeeklyPeriodFuelReport weeklyPeriodId={periodId} />
 						</CardContent>
 					</Card>
 				</TabsContent>

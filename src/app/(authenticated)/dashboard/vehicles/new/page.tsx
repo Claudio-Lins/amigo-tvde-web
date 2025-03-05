@@ -31,7 +31,7 @@ export default function NewVehiclePage() {
 	const form = useForm<FormData>({
 		resolver: zodResolver(vehicleSchema),
 		defaultValues: {
-			make: "",
+			brand: "",
 			model: "",
 			year: new Date().getFullYear(),
 			fuelType: FuelType.GASOLINE,
@@ -99,7 +99,7 @@ export default function NewVehiclePage() {
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<FormField
 									control={form.control}
-									name="make"
+									name="brand"
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Marca</FormLabel>
@@ -108,7 +108,7 @@ export default function NewVehiclePage() {
 													field.onChange(value);
 													setSelectedMake(value);
 												}}
-												value={field.value}
+												value={field.value as string}
 											>
 												<FormControl>
 													<SelectTrigger>

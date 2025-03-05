@@ -1,6 +1,7 @@
 "use client";
 
 import { createFuelRecord } from "@/actions/fuel-actions";
+import { getUserShifts } from "@/actions/shift-actions";
 import { getVehicles } from "@/actions/vehicle-actions";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -15,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { fuelRecordSchema } from "@/schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FuelType } from "@prisma/client";
+import { FuelType, Shift, Vehicle } from "@prisma/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Loader2 } from "lucide-react";
@@ -25,27 +26,35 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+interface ShiftWithVehicle extends Shift {
+	vehicle?: Vehicle;
+}
+
 export default function NewFuelRecordPage() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 	const vehicleId = searchParams.get("vehicleId");
-	const [vehicles, setVehicles] = useState<any[]>([]);
+	const shiftId = searchParams.get("shiftId");
+	const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+	const [shifts, setShifts] = useState<ShiftWithVehicle[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+	const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
 	const [chargingMethod, setChargingMethod] = useState<"volume" | "time">("volume");
 
-	// Carregar veículos
+	// Carregar veículos e turnos
 	useEffect(() => {
-		async function loadVehicles() {
+		async function loadData() {
 			try {
-				const result = await getVehicles();
-				if (result && !("error" in result)) {
-					setVehicles(result);
+				setIsLoading(true);
+				const [vehiclesResult, shiftsResult] = await Promise.all([getVehicles(), getUserShifts()]);
+
+				if (vehiclesResult && !("error" in vehiclesResult)) {
+					setVehicles(vehiclesResult);
 
 					// Se tiver um vehicleId no URL, selecionar esse veículo
 					if (vehicleId) {
-						const vehicle = result.find((v) => v.id === vehicleId);
+						const vehicle = vehiclesResult.find((v: Vehicle) => v.id === vehicleId);
 						if (vehicle) {
 							setSelectedVehicle(vehicle);
 							// Se for elétrico, definir método de carregamento como tempo
@@ -55,15 +64,23 @@ export default function NewFuelRecordPage() {
 						}
 					}
 				}
+
+				if (shiftsResult && !("error" in shiftsResult)) {
+					// Ordenar turnos por data (mais recentes primeiro)
+					const sortedShifts = shiftsResult.sort(
+						(a: ShiftWithVehicle, b: ShiftWithVehicle) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+					);
+					setShifts(sortedShifts);
+				}
 			} catch (error) {
-				console.error("Erro ao carregar veículos:", error);
-				toast.error("Erro ao carregar veículos");
+				console.error("Erro ao carregar dados:", error);
+				toast.error("Erro ao carregar dados necessários");
 			} finally {
 				setIsLoading(false);
 			}
 		}
 
-		loadVehicles();
+		loadData();
 	}, [vehicleId]);
 
 	const form = useForm<z.infer<typeof fuelRecordSchema>>({
@@ -77,6 +94,7 @@ export default function NewFuelRecordPage() {
 			fullTank: true,
 			notes: "",
 			vehicleId: vehicleId || "",
+			shiftId: shiftId || "",
 		},
 	});
 
@@ -118,7 +136,7 @@ export default function NewFuelRecordPage() {
 
 	async function onSubmit(data: z.infer<typeof fuelRecordSchema>) {
 		setIsSubmitting(true);
-
+		console.log(data);
 		try {
 			// Se for método de tempo para veículo elétrico, converter minutos para kWh estimado
 			if (chargingMethod === "time" && selectedVehicle?.fuelType === "ELECTRIC") {
@@ -168,9 +186,11 @@ export default function NewFuelRecordPage() {
 												onValueChange={(value) => {
 													field.onChange(value);
 													const vehicle = vehicles.find((v) => v.id === value);
-													setSelectedVehicle(vehicle);
+													if (vehicle) {
+														setSelectedVehicle(vehicle);
+													}
 												}}
-												value={field.value}
+												value={field.value as string}
 											>
 												<FormControl>
 													<SelectTrigger>
@@ -180,11 +200,40 @@ export default function NewFuelRecordPage() {
 												<SelectContent>
 													{vehicles.map((vehicle) => (
 														<SelectItem key={vehicle.id} value={vehicle.id}>
-															{vehicle.make} {vehicle.model} ({vehicle.licensePlate})
+															{vehicle.brand} {vehicle.model} ({vehicle.licensePlate})
 														</SelectItem>
 													))}
 												</SelectContent>
 											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Turno */}
+								<FormField
+									control={form.control}
+									name="shiftId"
+									render={({ field }) => (
+										<FormItem className="md:col-span-2">
+											<FormLabel>Turno</FormLabel>
+											<Select disabled={isLoading} onValueChange={field.onChange} value={field.value as string}>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Selecione um turno" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													{shifts.map((shift) => (
+														<SelectItem key={shift.id} value={shift.id}>
+															{format(new Date(shift.date), "dd/MM/yyyy", { locale: ptBR })} -
+															{shift.vehicle ? ` ${shift.vehicle.brand} ${shift.vehicle.model}` : ""} -
+															{shift.odometer ? ` ${shift.odometer.toFixed(0)} km` : ""}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											<FormDescription>Selecione o turno ao qual este abastecimento está associado</FormDescription>
 											<FormMessage />
 										</FormItem>
 									)}

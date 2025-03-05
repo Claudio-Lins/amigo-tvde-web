@@ -19,10 +19,11 @@ interface FuelRecordData {
 	vehicleId: string;
 	chargingMethod?: "volume" | "time";
 	location?: string;
-	weeklyPeriodId?: string;
+	shiftId: string;
 }
 
 export async function createFuelRecord(data: FuelRecordData) {
+	console.log("Dados recebidos na função createFuelRecord:", JSON.stringify(data, null, 2));
 	try {
 		const clerkUser = await currentUser();
 		if (!clerkUser) {
@@ -49,24 +50,77 @@ export async function createFuelRecord(data: FuelRecordData) {
 			return { error: "Veículo não encontrado ou não pertence ao usuário" };
 		}
 
-		// Criar o registro de combustível
+		// Verificar se o turno existe e pertence ao usuário
+		const shift = await prisma.shift.findFirst({
+			where: {
+				id: data.shiftId,
+				userId: dbUser.id,
+			},
+		});
+
+		if (!shift) {
+			return { error: "Turno não encontrado ou não pertence ao usuário" };
+		}
+
+		// Calcular o custo total se não fornecido
+		const totalCost = data.totalCost || data.amount * data.price;
+
+		// Criar a despesa do turno primeiro
+		const shiftExpense = await prisma.shiftExpense.create({
+			data: {
+				shift: {
+					connect: {
+						id: data.shiftId,
+					},
+				},
+				category: ExpenseCategory.FUEL,
+				description: `Abastecimento - ${data.amount.toFixed(2)}L a ${data.price.toFixed(3)}€/L`,
+				amount: totalCost,
+				user: {
+					connect: {
+						id: dbUser.id,
+					},
+				},
+			},
+		});
+
+		// Criar o registro de combustível associado à despesa
 		const fuelRecord = await prisma.fuelRecord.create({
 			data: {
 				date: data.date,
 				odometer: data.odometer,
 				fuelAmount: data.amount || 0,
 				pricePerUnit: data.price || 0,
-				totalPrice: data.totalCost || 0,
+				totalPrice: totalCost,
 				fullTank: data.fullTank,
 				notes: data.notes || "",
-				vehicleId: data.vehicleId,
-				userId: dbUser.id,
+				vehicle: {
+					connect: {
+						id: data.vehicleId,
+					},
+				},
+				user: {
+					connect: {
+						id: dbUser.id,
+					},
+				},
 				chargingMethod: data.chargingMethod,
+				shift: {
+					connect: {
+						id: data.shiftId,
+					},
+				},
+				shiftExpense: {
+					connect: {
+						id: shiftExpense.id,
+					},
+				},
 			},
 		});
 
 		revalidatePath("/dashboard/fuel-records");
 		revalidatePath("/dashboard/consumption");
+		revalidatePath(`/dashboard/shifts/${data.shiftId}`);
 
 		return { success: true, fuelRecord };
 	} catch (error) {
@@ -166,6 +220,9 @@ export async function updateFuelRecord(id: string, data: z.infer<typeof fuelReco
 				id,
 				userId: dbUser.id,
 			},
+			include: {
+				shiftExpense: true,
+			},
 		});
 
 		if (!existingRecord) {
@@ -184,8 +241,67 @@ export async function updateFuelRecord(id: string, data: z.infer<typeof fuelReco
 			return { error: "Veículo não encontrado" };
 		}
 
+		// Verificar se o turno existe e pertence ao usuário
+		const shift = await prisma.shift.findFirst({
+			where: {
+				id: data.shiftId,
+				userId: dbUser.id,
+			},
+		});
+
+		if (!shift) {
+			return { error: "Turno não encontrado" };
+		}
+
 		// Calcular o custo total se não fornecido
 		const totalCost = data.totalCost || data.amount * data.price;
+
+		// Atualizar a despesa do turno se existir
+		if (existingRecord.shiftExpense) {
+			await prisma.shiftExpense.update({
+				where: { id: existingRecord.shiftExpense.id },
+				data: {
+					shift: {
+						connect: {
+							id: data.shiftId,
+						},
+					},
+					amount: totalCost,
+					description: `Abastecimento - ${data.amount.toFixed(2)}L a ${data.price.toFixed(3)}€/L`,
+				},
+			});
+		} else {
+			// Criar uma nova despesa se não existir
+			const shiftExpense = await prisma.shiftExpense.create({
+				data: {
+					shift: {
+						connect: {
+							id: data.shiftId,
+						},
+					},
+					category: ExpenseCategory.FUEL,
+					description: `Abastecimento - ${data.amount.toFixed(2)}L a ${data.price.toFixed(3)}€/L`,
+					amount: totalCost,
+					user: {
+						connect: {
+							id: dbUser.id,
+						},
+					},
+				},
+			});
+
+			// Atualizar o registro com a nova despesa
+			await prisma.fuelRecord.update({
+				where: { id },
+				data: {
+					shiftExpense: {
+						connect: {
+							id: shiftExpense.id,
+						},
+					},
+				},
+			});
+		}
 
 		// Atualizar o registro
 		const updatedRecord = await prisma.fuelRecord.update({
@@ -194,23 +310,29 @@ export async function updateFuelRecord(id: string, data: z.infer<typeof fuelReco
 				date: data.date,
 				fuelAmount: data.amount,
 				pricePerUnit: data.price,
-				totalPrice: data.totalCost,
+				totalPrice: totalCost,
 				odometer: data.odometer,
 				fullTank: data.fullTank,
 				notes: data.notes,
-				vehicleId: data.vehicleId,
-				weeklyPeriodId: data.weeklyPeriodId,
+				vehicle: {
+					connect: {
+						id: data.vehicleId,
+					},
+				},
+				shift: {
+					connect: {
+						id: data.shiftId,
+					},
+				},
 			},
 		});
 
 		revalidatePath("/dashboard/consumption");
 		revalidatePath("/dashboard/fuel-records");
 		revalidatePath(`/dashboard/fuel-records/${id}/edit`);
-		if (data.weeklyPeriodId) {
-			revalidatePath(`/dashboard/weekly-periods/${data.weeklyPeriodId}`);
-		}
-		if (existingRecord.weeklyPeriodId && existingRecord.weeklyPeriodId !== data.weeklyPeriodId) {
-			revalidatePath(`/dashboard/weekly-periods/${existingRecord.weeklyPeriodId}`);
+		revalidatePath(`/dashboard/shifts/${data.shiftId}`);
+		if (existingRecord.shiftId && existingRecord.shiftId !== data.shiftId) {
+			revalidatePath(`/dashboard/shifts/${existingRecord.shiftId}`);
 		}
 
 		return { success: true, fuelRecord: updatedRecord };
@@ -241,10 +363,20 @@ export async function deleteFuelRecord(id: string) {
 				id,
 				userId: dbUser.id,
 			},
+			include: {
+				shiftExpense: true,
+			},
 		});
 
 		if (!fuelRecord) {
 			return { error: "Registro de combustível não encontrado" };
+		}
+
+		// Excluir a despesa do turno associada, se existir
+		if (fuelRecord.shiftExpense) {
+			await prisma.shiftExpense.delete({
+				where: { id: fuelRecord.shiftExpense.id },
+			});
 		}
 
 		// Excluir o registro
@@ -254,8 +386,8 @@ export async function deleteFuelRecord(id: string) {
 
 		revalidatePath("/dashboard/consumption");
 		revalidatePath("/dashboard/fuel-records");
-		if (fuelRecord.weeklyPeriodId) {
-			revalidatePath(`/dashboard/weekly-periods/${fuelRecord.weeklyPeriodId}`);
+		if (fuelRecord.shiftId) {
+			revalidatePath(`/dashboard/shifts/${fuelRecord.shiftId}`);
 		}
 
 		return { success: true };

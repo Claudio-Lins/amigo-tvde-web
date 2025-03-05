@@ -176,7 +176,7 @@ export default function VehiclesPage() {
 									<div>
 										<div className="flex items-center gap-2">
 											<h3 className="font-medium">
-												{vehicle.make} {vehicle.model} ({vehicle.year})
+												{vehicle.brand} {vehicle.model} ({vehicle.year})
 											</h3>
 											{vehicle.isDefault && (
 												<Badge variant="secondary" className="flex items-center gap-1">

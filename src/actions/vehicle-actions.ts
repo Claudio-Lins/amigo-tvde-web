@@ -24,7 +24,7 @@ export async function addVehicle(data: VehicleFormData) {
 		}
 
 		const vehicleData = {
-			make: data.make,
+			brand: data.brand,
 			model: data.model,
 			year: data.year,
 			fuelType: data.fuelType,
@@ -266,7 +266,7 @@ export async function updateVehicle(id: string, data: z.infer<typeof vehicleSche
 		const vehicle = await prisma.vehicle.update({
 			where: { id },
 			data: {
-				make: data.make,
+				brand: data.brand,
 				model: data.model,
 				year: data.year,
 				fuelType: data.fuelType,
@@ -426,7 +426,7 @@ export async function createVehicle(data: z.infer<typeof vehicleSchema>) {
 		// Criar o veículo
 		const vehicle = await prisma.vehicle.create({
 			data: {
-				make: data.make,
+				brand: data.brand,
 				model: data.model,
 				year: data.year,
 				fuelType: data.fuelType,

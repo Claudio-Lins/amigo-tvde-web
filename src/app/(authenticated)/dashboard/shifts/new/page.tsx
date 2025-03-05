@@ -245,7 +245,7 @@ export default function NewShiftPage() {
 														{vehicles.length > 0 ? (
 															vehicles.map((vehicle) => (
 																<SelectItem key={vehicle.id} value={vehicle.id}>
-																	{vehicle.make} {vehicle.model} ({vehicle.year})
+																	{vehicle.brand} {vehicle.model} ({vehicle.year})
 																</SelectItem>
 															))
 														) : (

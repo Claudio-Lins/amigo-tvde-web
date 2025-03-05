@@ -46,6 +46,11 @@ module.exports = {
 			code: "// TypeScript example\ninterface UserData {\n  id: string;\n  name: string;\n}\n\nfunction getUserData(): UserData {\n  return { id: '1', name: 'Driver' };\n}",
 		},
 		{
+			context: "Git",
+			action: "Sempre que implementar uma nova funcionalidade, usar o git para commitar e pushar as alterações",
+			code: "git add . && git commit -m 'commit message' && git push",
+		},
+		{
 			context: "When defining data structures",
 			action: "Use interfaces instead of types when possible",
 			code: "// Preferred\ninterface ShiftData {\n  date: Date;\n  initialKm: number;\n  finalKm: number;\n}\n\n// Avoid\n// type ShiftData = {\n//   date: Date;\n//   initialKm: number;\n//   finalKm: number;\n// };",

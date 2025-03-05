@@ -67,10 +67,13 @@ CREATE TABLE "WeeklyPeriod" (
 -- CreateTable
 CREATE TABLE "Shift" (
     "id" TEXT NOT NULL,
+    "startTime" TIMESTAMP(3),
+    "endTime" TIMESTAMP(3),
+    "breakMinutes" INTEGER,
     "date" TIMESTAMP(3) NOT NULL,
     "uberEarnings" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "boltEarnings" DOUBLE PRECISION NOT NULL DEFAULT 0,
-    "otherEarnings" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "otherEarnings" DOUBLE PRECISION DEFAULT 0,
     "totalEarnings" DOUBLE PRECISION,
     "odometer" DOUBLE PRECISION NOT NULL,
     "initialOdometer" DOUBLE PRECISION,
@@ -157,6 +160,26 @@ CREATE TABLE "Expense" (
     CONSTRAINT "Expense_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "FuelRecord" (
+    "id" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "odometer" DOUBLE PRECISION NOT NULL,
+    "fuelAmount" DOUBLE PRECISION NOT NULL,
+    "pricePerUnit" DOUBLE PRECISION NOT NULL,
+    "totalPrice" DOUBLE PRECISION NOT NULL,
+    "fullTank" BOOLEAN NOT NULL DEFAULT true,
+    "notes" TEXT,
+    "vehicleId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "chargingMethod" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "weeklyPeriodId" TEXT,
+
+    CONSTRAINT "FuelRecord_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -180,6 +203,12 @@ CREATE INDEX "Expense_shiftId_idx" ON "Expense"("shiftId");
 
 -- CreateIndex
 CREATE INDEX "Expense_weeklyPeriodId_idx" ON "Expense"("weeklyPeriodId");
+
+-- CreateIndex
+CREATE INDEX "FuelRecord_vehicleId_idx" ON "FuelRecord"("vehicleId");
+
+-- CreateIndex
+CREATE INDEX "FuelRecord_userId_idx" ON "FuelRecord"("userId");
 
 -- AddForeignKey
 ALTER TABLE "Vehicle" ADD CONSTRAINT "Vehicle_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -216,3 +245,12 @@ ALTER TABLE "Expense" ADD CONSTRAINT "Expense_shiftId_fkey" FOREIGN KEY ("shiftI
 
 -- AddForeignKey
 ALTER TABLE "Expense" ADD CONSTRAINT "Expense_weeklyPeriodId_fkey" FOREIGN KEY ("weeklyPeriodId") REFERENCES "WeeklyPeriod"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FuelRecord" ADD CONSTRAINT "FuelRecord_vehicleId_fkey" FOREIGN KEY ("vehicleId") REFERENCES "Vehicle"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FuelRecord" ADD CONSTRAINT "FuelRecord_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FuelRecord" ADD CONSTRAINT "FuelRecord_weeklyPeriodId_fkey" FOREIGN KEY ("weeklyPeriodId") REFERENCES "WeeklyPeriod"("id") ON DELETE SET NULL ON UPDATE CASCADE;

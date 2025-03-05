@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,85 +7,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum FuelType {
-  GASOLINE
-  ELECTRIC
-  HYBRID
-  DIESEL
-}
-
-enum PlatformType {
-  UBER
-  BOLT
-  TIPS
-}
-
-enum ShiftType {
-  MORNING // Manhã
-  AFTERNOON // Tarde
-  NIGHT // Noite
-}
-
-enum ExpenseCategory {
-  FUEL // Combustível
-  FOOD // Alimentação
-  MAINTENANCE // Manutenção
-  PARKING // Estacionamento
-  TOLL // Pedágio
-  RENT // Aluguel
-  OTHER // Outros
-}
-
-enum ExpenseFrequency {
-  DAILY
-  WEEKLY
-  MONTHLY
-  YEARLY
-}
-
-enum VehicleOwnership {
-  OWNED // Próprio
-  RENTED // Alugado
-  COMMISSION // Comissão
-}
-
 model User {
-  id          String  @id @default(uuid())
-  email       String? @unique
-  firstName   String?
-  lastName    String?
-  imageUrl    String?
-  clerkUserId String  @unique
-
-  vehicles      Vehicle[]
-  shifts        Shift[]
-  goals         UserGoal[]
+  id            String         @id @default(uuid())
+  email         String?        @unique
+  firstName     String?
+  lastName      String?
+  imageUrl      String?
+  clerkUserId   String         @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  Expense       Expense[]
   fixedExpenses FixedExpense[]
-  weeklyPeriods WeeklyPeriod[]
   fuelRecords   FuelRecord[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  Expense   Expense[]
+  shifts        Shift[]
+  shiftExpenses ShiftExpense[]
+  goals         UserGoal[]
+  vehicles      Vehicle[]
+  weeklyPeriods WeeklyPeriod[]
 }
 
 model Vehicle {
   id             String           @id @default(uuid())
-  make           String
   model          String
   year           Int
   fuelType       FuelType
   isDefault      Boolean          @default(false)
   ownership      VehicleOwnership @default(OWNED)
-  weeklyRent     Float? // Valor do aluguel semanal (para veículos alugados)
-  commissionRate Float? // Porcentagem de comissão (para veículos em comissão)
-  licensePlate   String? // Placa do veículo
+  weeklyRent     Float?
+  commissionRate Float?
+  licensePlate   String?
   userId         String
-  user           User             @relation(fields: [userId], references: [id])
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  Shift          Shift[]
+  brand          String
   fuelRecords    FuelRecord[]
+  Shift          Shift[]
+  user           User             @relation(fields: [userId], references: [id])
 }
 
 model WeeklyPeriod {
@@ -99,22 +50,22 @@ model WeeklyPeriod {
   name        String?
   startDate   DateTime
   endDate     DateTime
-  weeklyGoal  Float // Adicionando este campo
+  weeklyGoal  Float
   isActive    Boolean      @default(false)
   userId      String
-  user        User         @relation(fields: [userId], references: [id])
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  Shift       Shift[]
   Expense     Expense[]
   fuelRecords FuelRecord[]
+  Shift       Shift[]
+  user        User         @relation(fields: [userId], references: [id])
 }
 
 model Shift {
   id              String         @id @default(uuid())
-  startTime       DateTime? // Hora de início do turno
-  endTime         DateTime? // Hora de término do turno
-  breakMinutes    Int? // Tempo de pausa em minutos
+  startTime       DateTime?
+  endTime         DateTime?
+  breakMinutes    Int?
   date            DateTime
   uberEarnings    Float          @default(0)
   boltEarnings    Float          @default(0)
@@ -125,16 +76,17 @@ model Shift {
   finalOdometer   Float?
   notes           String?
   userId          String
-  user            User           @relation(fields: [userId], references: [id])
   vehicleId       String
-  vehicle         Vehicle        @relation(fields: [vehicleId], references: [id])
   weeklyPeriodId  String?
-  weeklyPeriod    WeeklyPeriod?  @relation(fields: [weeklyPeriodId], references: [id])
-  expenses        Expense[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-  ShiftIncome     ShiftIncome[]
+  expenses        Expense[]
+  fuelRecords     FuelRecord[]
+  user            User           @relation(fields: [userId], references: [id])
+  vehicle         Vehicle        @relation(fields: [vehicleId], references: [id])
+  weeklyPeriod    WeeklyPeriod?  @relation(fields: [weeklyPeriodId], references: [id])
   ShiftExpense    ShiftExpense[]
+  ShiftIncome     ShiftIncome[]
 
   @@index([userId])
   @@index([vehicleId])
@@ -142,80 +94,70 @@ model Shift {
 }
 
 model ShiftIncome {
-  id      String @id @default(uuid())
-  shiftId String // Associação com o turno
-  shift   Shift  @relation(fields: [shiftId], references: [id])
-
-  platform PlatformType // Plataforma de origem
-  amount   Float // Valor do rendimento
-
-  // Campos opcionais para detalhamento
-  tripCount   Int? // Número de viagens
-  description String? // Descrição adicional
-
-  isExtendedHour Boolean @default(false)
-
-  // Metadados
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String       @id @default(uuid())
+  shiftId        String
+  platform       PlatformType
+  amount         Float
+  tripCount      Int?
+  description    String?
+  isExtendedHour Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  shift          Shift        @relation(fields: [shiftId], references: [id])
 }
 
 model ShiftExpense {
-  id      String @id @default(uuid())
-  shiftId String // Associação com o turno
-  shift   Shift  @relation(fields: [shiftId], references: [id])
-
-  category    ExpenseCategory // Categoria da despesa
-  amount      Float // Valor da despesa
-  description String? // Descrição opcional
-
-  // Metadados
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String          @id @default(uuid())
+  shiftId     String
+  category    ExpenseCategory
+  amount      Float
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  userId      String
+  fuelRecord  FuelRecord?
+  shift       Shift           @relation(fields: [shiftId], references: [id])
+  user        User            @relation(fields: [userId], references: [id])
 }
 
 model UserGoal {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  weeklyNetIncome  Float? // Objetivo de ganho líquido semanal (opcional)
-  monthlyNetIncome Float // Objetivo de ganho líquido mensal
-  workDaysPerWeek  Int // Dias de trabalho por semana
-  workHoursPerDay  Float // Horas de trabalho por dia
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(uuid())
+  userId           String
+  weeklyNetIncome  Float?
+  monthlyNetIncome Float
+  workDaysPerWeek  Int
+  workHoursPerDay  Float
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id])
 }
 
 model FixedExpense {
-  id     String @id @default(uuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
-  name      String // Nome da despesa (ex: "Aluguel do carro")
-  amount    Float // Valor da despesa
-  frequency ExpenseFrequency // Frequência (semanal, mensal, etc)
-  dueDay    Int? // Dia de vencimento (para despesas mensais)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String           @id @default(uuid())
+  userId    String
+  name      String
+  amount    Float
+  frequency ExpenseFrequency
+  dueDay    Int?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id])
 }
 
 model Expense {
   id             String        @id @default(uuid())
   date           DateTime
   amount         Float
-  category       String // Ou use um enum se preferir
+  category       String
   notes          String?
   userId         String
-  user           User          @relation(fields: [userId], references: [id])
   shiftId        String?
-  shift          Shift?        @relation(fields: [shiftId], references: [id])
   weeklyPeriodId String?
-  weeklyPeriod   WeeklyPeriod? @relation(fields: [weeklyPeriodId], references: [id])
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  shift          Shift?        @relation(fields: [shiftId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  weeklyPeriod   WeeklyPeriod? @relation(fields: [weeklyPeriodId], references: [id])
 
   @@index([userId])
   @@index([shiftId])
@@ -232,15 +174,62 @@ model FuelRecord {
   fullTank       Boolean       @default(true)
   notes          String?
   vehicleId      String
-  vehicle        Vehicle       @relation(fields: [vehicleId], references: [id])
   userId         String
-  user           User          @relation(fields: [userId], references: [id])
-  chargingMethod String? // "volume" ou "time"
+  chargingMethod String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  WeeklyPeriod   WeeklyPeriod? @relation(fields: [weeklyPeriodId], references: [id])
   weeklyPeriodId String?
+  shiftId        String
+  shiftExpenseId String?       @unique
+  shiftExpense   ShiftExpense? @relation(fields: [shiftExpenseId], references: [id])
+  shift          Shift         @relation(fields: [shiftId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  vehicle        Vehicle       @relation(fields: [vehicleId], references: [id])
+  WeeklyPeriod   WeeklyPeriod? @relation(fields: [weeklyPeriodId], references: [id])
 
   @@index([vehicleId])
   @@index([userId])
+  @@index([shiftId])
+}
+
+enum FuelType {
+  GASOLINE
+  ELECTRIC
+  HYBRID
+  DIESEL
+}
+
+enum PlatformType {
+  UBER
+  BOLT
+  TIPS
+}
+
+enum ShiftType {
+  MORNING
+  AFTERNOON
+  NIGHT
+}
+
+enum ExpenseCategory {
+  FUEL
+  FOOD
+  MAINTENANCE
+  PARKING
+  TOLL
+  RENT
+  OTHER
+}
+
+enum ExpenseFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum VehicleOwnership {
+  OWNED
+  RENTED
+  COMMISSION
 }

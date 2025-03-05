@@ -33,7 +33,7 @@ export default function EditVehiclePage() {
 	const form = useForm<FormData>({
 		resolver: zodResolver(vehicleSchema),
 		defaultValues: {
-			make: "",
+			brand: "",
 			model: "",
 			year: new Date().getFullYear(),
 			fuelType: FuelType.GASOLINE,
@@ -70,7 +70,7 @@ export default function EditVehiclePage() {
 				if (result && !("error" in result)) {
 					// Preencher o formulário com os dados do veículo
 					form.reset({
-						make: result.make,
+						brand: result.brand,
 						model: result.model,
 						year: result.year,
 						fuelType: result.fuelType,
@@ -82,7 +82,7 @@ export default function EditVehiclePage() {
 					});
 
 					// Atualizar a marca selecionada para carregar os modelos disponíveis
-					setSelectedMake(result.make);
+					setSelectedMake(result.brand);
 				} else {
 					toast.error(result?.error || "Erro ao carregar veículo");
 					router.push("/dashboard/vehicles");
@@ -156,7 +156,7 @@ export default function EditVehiclePage() {
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 								<FormField
 									control={form.control}
-									name="make"
+									name="brand"
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Marca</FormLabel>
@@ -165,7 +165,7 @@ export default function EditVehiclePage() {
 													field.onChange(value);
 													setSelectedMake(value);
 												}}
-												value={field.value}
+												value={field.value as string}
 											>
 												<FormControl>
 													<SelectTrigger>
@@ -194,7 +194,7 @@ export default function EditVehiclePage() {
 											<FormLabel>Modelo</FormLabel>
 											<Select
 												onValueChange={field.onChange}
-												value={field.value}
+												value={field.value as string}
 												disabled={availableModels.length === 0}
 											>
 												<FormControl>
