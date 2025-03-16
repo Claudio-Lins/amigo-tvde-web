@@ -747,3 +747,78 @@ export async function getShiftsByPeriod(weeklyPeriodId: string) {
 		return { error: "Falha ao buscar turnos do período" };
 	}
 }
+
+/**
+ * Obtém o turno atual (do dia de hoje) ou o mais recente
+ */
+export async function getCurrentOrLatestShift() {
+	try {
+		// Verificar autenticação
+		const clerkUser = await currentUser();
+		if (!clerkUser) {
+			return { error: "Não autorizado. Faça login para continuar." };
+		}
+
+		// Buscar usuário no banco de dados
+		const dbUser = await prisma.user.findUnique({
+			where: { clerkUserId: clerkUser.id },
+		});
+
+		if (!dbUser) {
+			return { error: "Usuário não encontrado no banco de dados" };
+		}
+
+		// Data de hoje (início do dia)
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+
+		// Buscar turno de hoje
+		const todayShift = await prisma.shift.findFirst({
+			where: {
+				userId: dbUser.id,
+				date: {
+					gte: today,
+				},
+			},
+			orderBy: {
+				date: "desc",
+			},
+			include: {
+				vehicle: true,
+				ShiftIncome: true,
+				ShiftExpense: true,
+			},
+		});
+
+		// Se encontrou um turno hoje, retorna ele
+		if (todayShift) {
+			return { shift: todayShift };
+		}
+
+		// Se não encontrou turno hoje, busca o mais recente
+		const latestShift = await prisma.shift.findFirst({
+			where: {
+				userId: dbUser.id,
+			},
+			orderBy: {
+				date: "desc",
+			},
+			include: {
+				vehicle: true,
+				ShiftIncome: true,
+				ShiftExpense: true,
+			},
+		});
+
+		// Se encontrou algum turno, retorna ele
+		if (latestShift) {
+			return { shift: latestShift };
+		}
+
+		// Se não encontrou nenhum turno, retorna null
+		return { shift: null };
+	} catch (error) {
+		console.error("Erro ao buscar turno atual:", error);
+		return { error: "Falha ao buscar turno atual" };
+	}
+}

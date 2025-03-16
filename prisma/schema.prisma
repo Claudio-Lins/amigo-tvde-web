@@ -24,6 +24,7 @@ model User {
   goals         UserGoal[]
   vehicles      Vehicle[]
   weeklyPeriods WeeklyPeriod[]
+  mealExpenses  MealExpense[]
 }
 
 model Vehicle {
@@ -86,6 +87,7 @@ model Shift {
   weeklyPeriod    WeeklyPeriod?  @relation(fields: [weeklyPeriodId], references: [id])
   ShiftExpense    ShiftExpense[]
   ShiftIncome     ShiftIncome[]
+  mealExpenses    MealExpense[]
 
   @@index([userId])
   @@index([vehicleId])
@@ -132,15 +134,35 @@ model UserGoal {
 }
 
 model FixedExpense {
-  id        String           @id @default(uuid())
+  id        String              @id @default(uuid())
   userId    String
   name      String
   amount    Float
   frequency ExpenseFrequency
+  category  PersonalExpenseType
   dueDay    Int?
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  user      User             @relation(fields: [userId], references: [id])
+  isPaid    Boolean             @default(false)
+  paidDate  DateTime?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  user      User                @relation(fields: [userId], references: [id])
+}
+
+model MealExpense {
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime
+  amount      Float
+  location    String?
+  description String?
+  shiftId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+  shift       Shift?   @relation(fields: [shiftId], references: [id])
+
+  @@index([userId])
+  @@index([shiftId])
 }
 
 model Expense {
@@ -229,4 +251,18 @@ enum VehicleOwnership {
   OWNED
   RENTED
   COMMISSION
+}
+
+enum PersonalExpenseType {
+  RENT // Aluguel
+  UTILITIES // Água, luz, gás
+  INTERNET // Internet, TV, telefone
+  LOAN // Empréstimos
+  INSURANCE // Seguros
+  EDUCATION // Educação
+  HEALTHCARE // Saúde
+  GROCERIES // Compras de supermercado
+  LEISURE // Lazer
+  CLOTHING // Roupas
+  OTHER // Outros
 }

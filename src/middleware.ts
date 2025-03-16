@@ -23,17 +23,17 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 		return NextResponse.redirect(redirectUrl);
 	}
 
-	if (user?.userId && publicRoute) {
-		const redirectUrl = request.nextUrl.clone();
-		redirectUrl.pathname = "/dashboard";
-		return NextResponse.redirect(redirectUrl);
-	}
+	// if (user?.userId && publicRoute) {
+	// 	const redirectUrl = request.nextUrl.clone();
+	// 	redirectUrl.pathname = "/dashboard";
+	// 	return NextResponse.redirect(redirectUrl);
+	// }
 
-	if (user?.userId && publicRoute && publicRoute.wenAuthenticated === "redirect") {
-		const redirectUrl = request.nextUrl.clone();
-		redirectUrl.pathname = "/dashboard";
-		return NextResponse.redirect(redirectUrl);
-	}
+	// if (user?.userId && publicRoute && publicRoute.wenAuthenticated === "redirect") {
+	// 	const redirectUrl = request.nextUrl.clone();
+	// 	redirectUrl.pathname = "/dashboard";
+	// 	return NextResponse.redirect(redirectUrl);
+	// }
 
 	if (user?.userId && !publicRoute) {
 		return NextResponse.next();

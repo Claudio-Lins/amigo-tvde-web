@@ -4,12 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-import { Header } from "@/components/header";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ClerkProvider, SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import { currentUser } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const geistSans = Geist({
 	variable: "--font-geist-sans",
@@ -36,11 +32,7 @@ export default async function RootLayout({
 		<ClerkProvider>
 			<html lang="pt">
 				<body className={cn(geistSans.className, geistMono.className)}>
-					{/* <SignedIn> */}
-					{/* Conteúdo mostrado apenas para usuários autenticados */}
 					{children}
-					{/* </SignedIn> */}
-
 					<Toaster />
 				</body>
 			</html>
