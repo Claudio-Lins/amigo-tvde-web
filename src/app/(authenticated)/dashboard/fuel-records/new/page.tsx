@@ -86,9 +86,9 @@ export default function NewFuelRecordPage() {
 	const form = useForm<z.infer<typeof fuelRecordSchema>>({
 		resolver: zodResolver(fuelRecordSchema),
 		defaultValues: {
-			odometer: undefined,
-			amount: undefined,
-			price: undefined,
+			odometer: 0,
+			amount: 0,
+			price: 0,
 			totalCost: 0,
 			fullTank: true,
 			notes: "",
@@ -269,12 +269,16 @@ export default function NewFuelRecordPage() {
 												<Input
 													{...field}
 													type="number"
-													// min={0}
+													min={0}
 													step={0.1}
 													inputMode="numeric"
 													pattern="[0-9]*"
 													placeholder="0"
-													onChange={(e) => field.onChange(Number(e.target.value))}
+													value={field.value || ""}
+													onChange={(e) => {
+														const value = e.target.value === "" ? 0 : Number(e.target.value);
+														field.onChange(value);
+													}}
 												/>
 											</FormControl>
 											<FormMessage />
@@ -325,8 +329,10 @@ export default function NewFuelRecordPage() {
 													inputMode="numeric"
 													pattern="[0-9]*"
 													placeholder="0"
+													value={field.value || ""}
 													onChange={(e) => {
-														field.onChange(Number(e.target.value));
+														const value = e.target.value === "" ? 0 : Number(e.target.value);
+														field.onChange(value);
 														calculateTotalPrice();
 													}}
 												/>
@@ -355,8 +361,11 @@ export default function NewFuelRecordPage() {
 													type="number"
 													min={0}
 													step={0.001}
+													placeholder="0"
+													value={field.value || ""}
 													onChange={(e) => {
-														field.onChange(Number(e.target.value));
+														const value = e.target.value === "" ? 0 : Number(e.target.value);
+														field.onChange(value);
 														calculateTotalPrice();
 													}}
 												/>
@@ -379,8 +388,11 @@ export default function NewFuelRecordPage() {
 													type="number"
 													min={0}
 													step={0.01}
+													placeholder="0"
+													value={field.value || ""}
 													onChange={(e) => {
-														field.onChange(Number(e.target.value));
+														const value = e.target.value === "" ? 0 : Number(e.target.value);
+														field.onChange(value);
 														calculateFuelAmount();
 													}}
 												/>
