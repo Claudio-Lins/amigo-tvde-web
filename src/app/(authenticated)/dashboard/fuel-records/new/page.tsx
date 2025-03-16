@@ -143,6 +143,8 @@ export default function NewFuelRecordPage() {
 			amount: Number(data.amount),
 			price: Number(data.price),
 			totalCost: Number(data.totalCost || 0),
+			// Garantir que chargingMethod esteja definido
+			chargingMethod: chargingMethod as "volume" | "time",
 		};
 
 		console.log("Dados do formulário processados:", JSON.stringify(processedData, null, 2));
@@ -155,22 +157,9 @@ export default function NewFuelRecordPage() {
 				// data.fuelAmount = estimateKwhFromMinutes(data.fuelAmount);
 			}
 
-			console.log(
-				"Enviando dados para createFuelRecord:",
-				JSON.stringify(
-					{
-						...processedData,
-						chargingMethod,
-					},
-					null,
-					2,
-				),
-			);
+			console.log("Enviando dados para createFuelRecord:", JSON.stringify(processedData, null, 2));
 
-			const result = await createFuelRecord({
-				...processedData,
-				chargingMethod,
-			});
+			const result = await createFuelRecord(processedData);
 
 			console.log("Resultado da criação:", JSON.stringify(result, null, 2));
 
@@ -523,16 +512,59 @@ export default function NewFuelRecordPage() {
 								/>
 							</div>
 
-							<Button type="submit" className="w-full">
-								{isSubmitting ? (
-									<>
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Registrando...
-									</>
-								) : (
-									"Registrar Abastecimento"
-								)}
-							</Button>
+							<div className="flex flex-col gap-4">
+								<Button type="submit" className="w-full">
+									{isSubmitting ? (
+										<>
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+											Registrando...
+										</>
+									) : (
+										"Registrar Abastecimento"
+									)}
+								</Button>
+
+								<Button
+									type="button"
+									variant="secondary"
+									className="w-full"
+									onClick={() => {
+										console.log("Botão alternativo clicado!");
+										// Obter valores atuais do formulário
+										const formValues = form.getValues();
+										console.log("Valores do formulário:", JSON.stringify(formValues, null, 2));
+
+										// Verificar erros
+										const formState = form.formState;
+										console.log(
+											"Estado do formulário:",
+											JSON.stringify(
+												{
+													isDirty: formState.isDirty,
+													isValid: formState.isValid,
+													errors: formState.errors,
+												},
+												null,
+												2,
+											),
+										);
+
+										// Se houver erros, mostrar toast
+										if (Object.keys(formState.errors).length > 0) {
+											const errorMessages = Object.entries(formState.errors)
+												.map(([field, error]) => `${field}: ${error.message}`)
+												.join(", ");
+											toast.error(`Erros no formulário: ${errorMessages}`);
+											return;
+										}
+
+										// Chamar onSubmit diretamente
+										onSubmit(formValues);
+									}}
+								>
+									Registrar (Método Alternativo)
+								</Button>
+							</div>
 						</form>
 					</Form>
 				</CardContent>
