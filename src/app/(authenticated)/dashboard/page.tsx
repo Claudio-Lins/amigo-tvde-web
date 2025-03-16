@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { pt } from "date-fns/locale";
 import { ArrowRight, Calendar, Car, Euro } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -103,8 +103,8 @@ export default function DashboardPage() {
 											Período Atual
 										</CardTitle>
 										<CardDescription>
-											{format(new Date(activePeriod.startDate), "dd/MM", { locale: ptBR })} -{" "}
-											{format(new Date(activePeriod.endDate), "dd/MM/yyyy", { locale: ptBR })}
+											{format(new Date(activePeriod.startDate), "dd/MM", { locale: pt })} -{" "}
+											{format(new Date(activePeriod.endDate), "dd/MM/yyyy", { locale: pt })}
 										</CardDescription>
 									</CardHeader>
 									<CardContent>
@@ -247,8 +247,8 @@ export default function DashboardPage() {
 										<CardHeader className="pb-2">
 											<CardTitle className="text-lg">{period.name || "Período Semanal"}</CardTitle>
 											<CardDescription>
-												{format(new Date(period.startDate), "dd/MM", { locale: ptBR })} -{" "}
-												{format(new Date(period.endDate), "dd/MM/yyyy", { locale: ptBR })}
+												{format(new Date(period.startDate), "dd/MM", { locale: pt })} -{" "}
+												{format(new Date(period.endDate), "dd/MM/yyyy", { locale: pt })}
 											</CardDescription>
 										</CardHeader>
 										<CardContent className="pb-2">

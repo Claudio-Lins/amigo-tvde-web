@@ -16,9 +16,9 @@ export async function POST(req: NextRequest) {
 
 		if (result && "success" in result) {
 			return NextResponse.json(result, { status: 201 });
-		} else {
-			return NextResponse.json(result, { status: 400 });
 		}
+
+		return NextResponse.json(result, { status: 400 });
 	} catch (error) {
 		console.error("Erro ao processar requisição:", error);
 		return NextResponse.json({ error: "Erro ao processar a requisição" }, { status: 500 });
