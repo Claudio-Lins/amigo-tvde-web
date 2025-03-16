@@ -6,7 +6,8 @@ import { Separator } from "@/components/ui/separator";
 import { checkUser } from "@/lib/check-user";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Calendar } from "lucide-react";
+import { Calendar, Fuel } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function Home() {
@@ -121,15 +122,25 @@ export default async function Home() {
 
 			{/* Botões para as plataformas */}
 			<div className="flex items-center justify-evenly w-full gap-4 text-white">
-				<Button variant="default" className="w-full bg-zinc-900">
-					UBER
-				</Button>
-				<Button variant="default" className="w-full bg-green-600">
-					Bolt
-				</Button>
-				<Button variant="default" className="w-full bg-blue-600">
-					Tip
-				</Button>
+				<Link
+					href="/dashboard/fuel-records/new"
+					className="flex items-center justify-center border p-2 rounded-full size-10 text-zinc-900"
+				>
+					€
+				</Link>
+				<Link
+					href="/dashboard/fuel-records/new"
+					className="flex items-center justify-center border p-2 rounded-full size-10"
+				>
+					🍴
+				</Link>
+
+				<Link
+					href="/dashboard/fuel-records/new"
+					className="flex items-center justify-center border p-2 rounded-full size-10"
+				>
+					🔌
+				</Link>
 			</div>
 		</div>
 	);

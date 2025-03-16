@@ -26,6 +26,7 @@ export async function createFuelRecord(data: FuelRecordData) {
 	try {
 		const clerkUser = await currentUser();
 		if (!clerkUser) {
+			console.error("Usuário não autenticado");
 			return { error: "Usuário não autenticado" };
 		}
 
@@ -34,6 +35,7 @@ export async function createFuelRecord(data: FuelRecordData) {
 		});
 
 		if (!dbUser) {
+			console.error("Usuário não encontrado no banco de dados");
 			return { error: "Usuário não encontrado no banco de dados" };
 		}
 
@@ -46,6 +48,7 @@ export async function createFuelRecord(data: FuelRecordData) {
 		});
 
 		if (!vehicle) {
+			console.error("Veículo não encontrado ou não pertence ao usuário");
 			return { error: "Veículo não encontrado ou não pertence ao usuário" };
 		}
 
@@ -58,73 +61,88 @@ export async function createFuelRecord(data: FuelRecordData) {
 		});
 
 		if (!shift) {
+			console.error("Turno não encontrado ou não pertence ao usuário");
 			return { error: "Turno não encontrado ou não pertence ao usuário" };
 		}
 
 		// Calcular o custo total se não fornecido
 		const totalCost = data.totalCost || data.amount * data.price;
+		console.log("Custo total calculado:", totalCost);
 
-		// Criar a despesa do turno primeiro
-		const shiftExpense = await prisma.shiftExpense.create({
-			data: {
-				shift: {
-					connect: {
-						id: data.shiftId,
+		try {
+			// Criar a despesa do turno primeiro
+			console.log("Criando despesa do turno...");
+			const shiftExpense = await prisma.shiftExpense.create({
+				data: {
+					shift: {
+						connect: {
+							id: data.shiftId,
+						},
+					},
+					category: ExpenseCategory.FUEL,
+					description: `Abastecimento - ${data.amount.toFixed(2)}L a ${data.price.toFixed(3)}€/L`,
+					amount: totalCost,
+					user: {
+						connect: {
+							id: dbUser.id,
+						},
 					},
 				},
-				category: ExpenseCategory.FUEL,
-				description: `Abastecimento - ${data.amount.toFixed(2)}L a ${data.price.toFixed(3)}€/L`,
-				amount: totalCost,
-				user: {
-					connect: {
-						id: dbUser.id,
-					},
-				},
-			},
-		});
+			});
+			console.log("Despesa criada com sucesso:", shiftExpense.id);
 
-		// Criar o registro de combustível associado à despesa
-		const fuelRecord = await prisma.fuelRecord.create({
-			data: {
-				date: shift.date,
-				odometer: data.odometer,
-				fuelAmount: data.amount || 0,
-				pricePerUnit: data.price || 0,
-				totalPrice: totalCost,
-				fullTank: data.fullTank,
-				notes: data.notes || "",
-				vehicle: {
-					connect: {
-						id: data.vehicleId,
+			// Criar o registro de combustível associado à despesa
+			console.log("Criando registro de combustível...");
+			const fuelRecord = await prisma.fuelRecord.create({
+				data: {
+					date: shift.date,
+					odometer: data.odometer,
+					fuelAmount: data.amount || 0,
+					pricePerUnit: data.price || 0,
+					totalPrice: totalCost,
+					fullTank: data.fullTank,
+					notes: data.notes || "",
+					vehicle: {
+						connect: {
+							id: data.vehicleId,
+						},
+					},
+					user: {
+						connect: {
+							id: dbUser.id,
+						},
+					},
+					chargingMethod: data.chargingMethod,
+					shift: {
+						connect: {
+							id: data.shiftId,
+						},
+					},
+					shiftExpense: {
+						connect: {
+							id: shiftExpense.id,
+						},
 					},
 				},
-				user: {
-					connect: {
-						id: dbUser.id,
-					},
-				},
-				chargingMethod: data.chargingMethod,
-				shift: {
-					connect: {
-						id: data.shiftId,
-					},
-				},
-				shiftExpense: {
-					connect: {
-						id: shiftExpense.id,
-					},
-				},
-			},
-		});
+			});
+			console.log("Registro de combustível criado com sucesso:", fuelRecord.id);
 
-		revalidatePath("/dashboard/fuel-records");
-		revalidatePath("/dashboard/consumption");
-		revalidatePath(`/dashboard/shifts/${data.shiftId}`);
+			revalidatePath("/dashboard/fuel-records");
+			revalidatePath("/dashboard/consumption");
+			revalidatePath(`/dashboard/shifts/${data.shiftId}`);
 
-		return { success: true, fuelRecord };
+			return { success: true, fuelRecord };
+		} catch (prismaError) {
+			console.error("Erro do Prisma ao criar registro:", prismaError);
+			return {
+				error: `Erro ao criar registro: ${prismaError instanceof Error ? prismaError.message : String(prismaError)}`,
+			};
+		}
 	} catch (error) {
 		console.error("Erro ao criar registro de combustível:", error);
-		return { error: "Falha ao adicionar registro de combustível" };
+		return {
+			error: `Falha ao adicionar registro de combustível: ${error instanceof Error ? error.message : String(error)}`,
+		};
 	}
 }
 

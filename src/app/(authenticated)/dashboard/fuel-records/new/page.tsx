@@ -86,9 +86,9 @@ export default function NewFuelRecordPage() {
 	const form = useForm<z.infer<typeof fuelRecordSchema>>({
 		resolver: zodResolver(fuelRecordSchema),
 		defaultValues: {
-			odometer: 0,
-			amount: 0,
-			price: 0,
+			odometer: undefined,
+			amount: undefined,
+			price: undefined,
 			totalCost: 0,
 			fullTank: true,
 			notes: "",
@@ -134,8 +134,8 @@ export default function NewFuelRecordPage() {
 	}
 
 	async function onSubmit(data: z.infer<typeof fuelRecordSchema>) {
+		console.log("Dados do formulário:", JSON.stringify(data, null, 2));
 		setIsSubmitting(true);
-		console.log(data);
 		try {
 			// Se for método de tempo para veículo elétrico, converter minutos para kWh estimado
 			if (chargingMethod === "time" && selectedVehicle?.fuelType === "ELECTRIC") {
@@ -144,12 +144,30 @@ export default function NewFuelRecordPage() {
 				// data.fuelAmount = estimateKwhFromMinutes(data.fuelAmount);
 			}
 
-			const result = await createFuelRecord(data);
+			console.log(
+				"Enviando dados para createFuelRecord:",
+				JSON.stringify(
+					{
+						...data,
+						chargingMethod,
+					},
+					null,
+					2,
+				),
+			);
+
+			const result = await createFuelRecord({
+				...data,
+				chargingMethod,
+			});
+
+			console.log("Resultado da criação:", JSON.stringify(result, null, 2));
 
 			if (result && "success" in result) {
 				toast.success("Registro de combustível adicionado com sucesso");
 				router.push("/dashboard/fuel-records");
 			} else {
+				console.error("Erro retornado pela API:", result?.error);
 				toast.error(result?.error || "Erro ao adicionar registro de combustível");
 			}
 		} catch (error) {
@@ -161,18 +179,18 @@ export default function NewFuelRecordPage() {
 	}
 
 	return (
-		<div className="container py-6 space-y-6">
-			<Card>
+		<div className="container py-12 space-y-6">
+			<Card className="border-none shadow-none p-0">
 				<CardHeader>
 					<CardTitle>Novo Registro de Combustível</CardTitle>
-					<CardDescription>
+					<CardDescription className="hidden md:block">
 						Registre um abastecimento ou carregamento para acompanhar o consumo do seu veículo.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-							<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
 								{/* Veículo */}
 								<FormField
 									control={form.control}
@@ -232,7 +250,9 @@ export default function NewFuelRecordPage() {
 													))}
 												</SelectContent>
 											</Select>
-											<FormDescription>Selecione o turno ao qual este abastecimento está associado</FormDescription>
+											<FormDescription className="text-xs md:text-sm">
+												Selecione o turno ao qual este abastecimento está associado
+											</FormDescription>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -249,8 +269,11 @@ export default function NewFuelRecordPage() {
 												<Input
 													{...field}
 													type="number"
-													min={0}
+													// min={0}
 													step={0.1}
+													inputMode="numeric"
+													pattern="[0-9]*"
+													placeholder="0"
 													onChange={(e) => field.onChange(Number(e.target.value))}
 												/>
 											</FormControl>
@@ -268,11 +291,11 @@ export default function NewFuelRecordPage() {
 											onValueChange={(value) => setChargingMethod(value as "volume" | "time")}
 											className="flex space-x-4 mt-2"
 										>
-											<div className="flex items-center space-x-2">
+											<div className="flex items-center space-x-2 text-xs md:text-sm">
 												<RadioGroupItem value="volume" id="volume" />
 												<label htmlFor="volume">kWh (energia)</label>
 											</div>
-											<div className="flex items-center space-x-2">
+											<div className="flex items-center space-x-2 text-xs md:text-sm">
 												<RadioGroupItem value="time" id="time" />
 												<label htmlFor="time">Minutos (tempo)</label>
 											</div>
@@ -299,6 +322,9 @@ export default function NewFuelRecordPage() {
 													type="number"
 													min={0}
 													step={0.01}
+													inputMode="numeric"
+													pattern="[0-9]*"
+													placeholder="0"
 													onChange={(e) => {
 														field.onChange(Number(e.target.value));
 														calculateTotalPrice();
@@ -377,7 +403,7 @@ export default function NewFuelRecordPage() {
 												<FormLabel>
 													{selectedVehicle?.fuelType === "ELECTRIC" ? "Carregamento completo" : "Tanque cheio"}
 												</FormLabel>
-												<FormDescription>
+												<FormDescription className="text-[10px] md:text-sm">
 													{selectedVehicle?.fuelType === "ELECTRIC"
 														? "Marque se o veículo foi carregado até 100%"
 														: "Marque se o tanque foi completamente abastecido"}
@@ -395,7 +421,11 @@ export default function NewFuelRecordPage() {
 										<FormItem className="md:col-span-2">
 											<FormLabel>Observações</FormLabel>
 											<FormControl>
-												<Textarea {...field} placeholder="Observações sobre o abastecimento (opcional)" />
+												<Textarea
+													{...field}
+													placeholder="Observações sobre o abastecimento (opcional)"
+													className="resize-none text-xs md:text-sm"
+												/>
 											</FormControl>
 											<FormMessage />
 										</FormItem>
@@ -403,7 +433,7 @@ export default function NewFuelRecordPage() {
 								/>
 							</div>
 
-							<Button type="submit" disabled={isSubmitting} className="w-full">
+							<Button type="submit" className="w-full">
 								{isSubmitting ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
