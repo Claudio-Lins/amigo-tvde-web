@@ -262,30 +262,10 @@ export default function NewFuelRecordPage() {
 				<CardContent>
 					<Form {...form}>
 						<form
-							onSubmit={(e) => {
-								console.log("Evento de submit acionado!");
-
-								// Verificar erros de validação
-								const formState = form.getValues();
-								console.log("Valores do formulário:", JSON.stringify(formState, null, 2));
-
-								const formErrors = form.formState.errors;
-								console.log("Erros de validação:", JSON.stringify(formErrors, null, 2));
-
-								// Verificar se o formulário é válido
-								if (Object.keys(formErrors).length > 0) {
-									console.log("Formulário inválido, não será enviado");
-									// Exibir toast com erros
-									const errorMessages = Object.entries(formErrors)
-										.map(([field, error]) => `${field}: ${error.message}`)
-										.join(", ");
-									toast.error(`Erros no formulário: ${errorMessages}`);
-								} else {
-									console.log("Formulário válido, prosseguindo com o envio");
-								}
-
-								form.handleSubmit(onSubmit)(e);
-							}}
+							onSubmit={form.handleSubmit((data) => {
+								console.log("Form handleSubmit chamado com sucesso!");
+								onSubmit(data);
+							})}
 							className="space-y-2"
 						>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
@@ -543,13 +523,7 @@ export default function NewFuelRecordPage() {
 								/>
 							</div>
 
-							<Button
-								type="submit"
-								className="w-full"
-								onClick={() => {
-									console.log("Botão de submit clicado!");
-								}}
-							>
+							<Button type="submit" className="w-full">
 								{isSubmitting ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
