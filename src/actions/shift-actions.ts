@@ -111,6 +111,7 @@ export async function startShift(data: StartShiftWithExpensesAndIncomes) {
 					return prisma.shiftExpense.create({
 						data: {
 							shiftId: shift.id,
+							userId: user.id,
 							category: expense.category,
 							amount: expense.amount,
 							description: expense.description,
@@ -237,6 +238,7 @@ export async function endShift(data: {
 				return prisma.shiftExpense.create({
 					data: {
 						shiftId: shift.id,
+						userId: user.id,
 						category: expense.category,
 						amount: expense.amount,
 						description: expense.description,
