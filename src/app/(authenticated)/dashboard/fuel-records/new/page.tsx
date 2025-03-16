@@ -134,6 +134,7 @@ export default function NewFuelRecordPage() {
 	}
 
 	async function onSubmit(data: z.infer<typeof fuelRecordSchema>) {
+		console.log("Função onSubmit foi chamada!");
 		console.log("Dados do formulário:", JSON.stringify(data, null, 2));
 		setIsSubmitting(true);
 		try {
@@ -189,7 +190,33 @@ export default function NewFuelRecordPage() {
 				</CardHeader>
 				<CardContent>
 					<Form {...form}>
-						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+						<form
+							onSubmit={(e) => {
+								console.log("Evento de submit acionado!");
+
+								// Verificar erros de validação
+								const formState = form.getValues();
+								console.log("Valores do formulário:", JSON.stringify(formState, null, 2));
+
+								const formErrors = form.formState.errors;
+								console.log("Erros de validação:", JSON.stringify(formErrors, null, 2));
+
+								// Verificar se o formulário é válido
+								if (Object.keys(formErrors).length > 0) {
+									console.log("Formulário inválido, não será enviado");
+									// Exibir toast com erros
+									const errorMessages = Object.entries(formErrors)
+										.map(([field, error]) => `${field}: ${error.message}`)
+										.join(", ");
+									toast.error(`Erros no formulário: ${errorMessages}`);
+								} else {
+									console.log("Formulário válido, prosseguindo com o envio");
+								}
+
+								form.handleSubmit(onSubmit)(e);
+							}}
+							className="space-y-2"
+						>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
 								{/* Veículo */}
 								<FormField
