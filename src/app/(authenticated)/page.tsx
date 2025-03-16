@@ -1,4 +1,4 @@
-import { getCurrentOrLatestShift } from "@/actions/shift-actions";
+import { getCurrentOrLatestShift, getShiftsByPeriod } from "@/actions/shift-actions";
 import { getActiveWeeklyPeriod } from "@/actions/weekly-period-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,24 +22,37 @@ export default async function Home() {
 	// Obter o período semanal ativo
 	const activePeriod = await getActiveWeeklyPeriod();
 
-	// Calcular o valor total dos ganhos usando os campos diretos do turno
+	// Calcular o valor total dos ganhos usando os campos diretos do turno atual (para o círculo)
 	const uberEarnings = shiftResult.shift?.uberEarnings || 0;
 	const boltEarnings = shiftResult.shift?.boltEarnings || 0;
 	const otherEarnings = shiftResult.shift?.otherEarnings || 0;
 
-	// Somar todos os ganhos
-	const totalEarnings = uberEarnings + boltEarnings + otherEarnings;
+	// Somar todos os ganhos do turno atual (para o círculo)
+	const currentShiftEarnings = uberEarnings + boltEarnings + otherEarnings;
 
 	// Calcular o progresso da meta (se houver um período ativo)
 	let goalProgress = 0;
 	let remainingGoal = 0;
 	let weeklyGoal = 0;
 	let periodDates = { start: new Date(), end: new Date() };
+	let totalPeriodEarnings = 0;
 
 	if (activePeriod && !("error" in activePeriod)) {
 		weeklyGoal = activePeriod.weeklyGoal;
-		remainingGoal = Math.max(0, weeklyGoal - totalEarnings);
-		goalProgress = (totalEarnings / weeklyGoal) * 100;
+
+		// Buscar todos os turnos do período ativo
+		const shiftsResult = await getShiftsByPeriod(activePeriod.id);
+
+		// Calcular o total de ganhos do período somando todos os turnos
+		if (Array.isArray(shiftsResult)) {
+			totalPeriodEarnings = shiftsResult.reduce(
+				(acc, shift) => acc + (shift.uberEarnings || 0) + (shift.boltEarnings || 0) + (shift.otherEarnings || 0),
+				0,
+			);
+		}
+
+		remainingGoal = Math.max(0, weeklyGoal - totalPeriodEarnings);
+		goalProgress = (totalPeriodEarnings / weeklyGoal) * 100;
 		periodDates = {
 			start: new Date(activePeriod.startDate),
 			end: new Date(activePeriod.endDate),
@@ -52,10 +65,10 @@ export default async function Home() {
 
 	return (
 		<div className="w-full min-h-dvh p-4 flex flex-col items-center">
-			{/* Círculo com o valor total */}
+			{/* Círculo com o valor total do turno atual */}
 			<div className="flex flex-col size-40 items-center justify-center border-8 border-gray-300 p-4 rounded-full">
 				<p className="text-2xl font-bold">
-					{totalEarnings.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}
+					{currentShiftEarnings.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })}
 				</p>
 			</div>
 
@@ -83,7 +96,7 @@ export default async function Home() {
 							</div>
 							<div className="flex justify-between">
 								<span className="text-muted-foreground">Ganhos:</span>
-								<span className="font-medium">{totalEarnings.toFixed(2)} €</span>
+								<span className="font-medium">{totalPeriodEarnings.toFixed(2)} €</span>
 							</div>
 							<div className="flex justify-between">
 								<span className="text-muted-foreground">Restante:</span>
