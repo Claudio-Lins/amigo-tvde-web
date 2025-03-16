@@ -135,7 +135,17 @@ export default function NewFuelRecordPage() {
 
 	async function onSubmit(data: z.infer<typeof fuelRecordSchema>) {
 		console.log("Função onSubmit foi chamada!");
-		console.log("Dados do formulário:", JSON.stringify(data, null, 2));
+
+		// Garantir que todos os campos numéricos sejam números
+		const processedData = {
+			...data,
+			odometer: Number(data.odometer),
+			amount: Number(data.amount),
+			price: Number(data.price),
+			totalCost: Number(data.totalCost || 0),
+		};
+
+		console.log("Dados do formulário processados:", JSON.stringify(processedData, null, 2));
 		setIsSubmitting(true);
 		try {
 			// Se for método de tempo para veículo elétrico, converter minutos para kWh estimado
@@ -149,7 +159,7 @@ export default function NewFuelRecordPage() {
 				"Enviando dados para createFuelRecord:",
 				JSON.stringify(
 					{
-						...data,
+						...processedData,
 						chargingMethod,
 					},
 					null,
@@ -158,7 +168,7 @@ export default function NewFuelRecordPage() {
 			);
 
 			const result = await createFuelRecord({
-				...data,
+				...processedData,
 				chargingMethod,
 			});
 
@@ -472,7 +482,13 @@ export default function NewFuelRecordPage() {
 								/>
 							</div>
 
-							<Button type="submit" className="w-full">
+							<Button
+								type="submit"
+								className="w-full"
+								onClick={() => {
+									console.log("Botão de submit clicado!");
+								}}
+							>
 								{isSubmitting ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
