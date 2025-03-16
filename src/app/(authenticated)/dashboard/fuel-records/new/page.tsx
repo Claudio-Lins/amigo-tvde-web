@@ -191,6 +191,67 @@ export default function NewFuelRecordPage() {
 
 	return (
 		<div className="container py-12 space-y-6">
+			{/* Botão de teste */}
+			<Card className="border-none shadow-none p-0 mb-4">
+				<CardHeader>
+					<CardTitle>Teste de Funcionalidade</CardTitle>
+				</CardHeader>
+				<CardContent>
+					<Button
+						onClick={() => {
+							console.log("Botão de teste clicado!");
+
+							// Testar se a função createFuelRecord está funcionando
+							const testData = {
+								odometer: 1000,
+								amount: 50,
+								price: 1.5,
+								totalCost: 75,
+								fullTank: true,
+								notes: "Teste",
+								vehicleId: vehicles[0]?.id || "",
+								shiftId: shifts[0]?.id || "",
+								chargingMethod: "volume" as const,
+							};
+
+							console.log("Dados de teste:", JSON.stringify(testData, null, 2));
+
+							// Verificar se os IDs são válidos
+							if (!testData.vehicleId) {
+								console.error("Nenhum veículo disponível para teste");
+								toast.error("Nenhum veículo disponível para teste");
+								return;
+							}
+
+							if (!testData.shiftId) {
+								console.error("Nenhum turno disponível para teste");
+								toast.error("Nenhum turno disponível para teste");
+								return;
+							}
+
+							// Chamar a função diretamente
+							createFuelRecord(testData)
+								.then((result) => {
+									console.log("Resultado do teste:", JSON.stringify(result, null, 2));
+									if (result && "success" in result) {
+										toast.success("Teste bem-sucedido!");
+									} else {
+										toast.error(result?.error || "Erro no teste");
+									}
+								})
+								.catch((error) => {
+									console.error("Erro no teste:", error);
+									toast.error("Erro ao executar o teste");
+								});
+						}}
+						className="w-full"
+						variant="outline"
+					>
+						Testar Criação de Registro (Bypass Formulário)
+					</Button>
+				</CardContent>
+			</Card>
+
 			<Card className="border-none shadow-none p-0">
 				<CardHeader>
 					<CardTitle>Novo Registro de Combustível</CardTitle>
