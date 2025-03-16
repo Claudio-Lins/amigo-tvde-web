@@ -17,11 +17,11 @@ export default async function Home() {
 	// Calcular o valor total do turno (soma de todos os rendimentos)
 	const totalEarnings = shiftResult.shift?.ShiftIncome?.reduce((total, income) => total + income.amount, 0) || 0;
 
-	// Obter a data do turno ou a data atual
-	const shiftDate = shiftResult.shift?.date || new Date();
+	// Usar sempre a data atual
+	const currentDate = new Date();
 
-	// Formatar a data
-	const formattedDate = format(shiftDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+	// Formatar a data atual
+	const formattedDate = format(currentDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
 	return (
 		<div className="w-full min-h-dvh p-4 flex flex-col items-center">
