@@ -822,3 +822,107 @@ export async function getCurrentOrLatestShift() {
 		return { error: "Falha ao buscar turno atual" };
 	}
 }
+
+/**
+ * Adiciona ganhos a um turno existente ou ao turno atual/mais recente
+ */
+export async function addEarningsToShift(data: {
+	platform: "UBER" | "BOLT" | "TIPS";
+	amount: number;
+	tripCount?: number;
+	description?: string;
+	shiftId?: string; // Opcional, se não fornecido, usa o turno atual/mais recente
+}) {
+	try {
+		// Verificar autenticação
+		const clerkUser = await currentUser();
+		if (!clerkUser) {
+			return { error: "Não autorizado. Faça login para continuar." };
+		}
+
+		// Buscar usuário no banco de dados
+		const dbUser = await prisma.user.findUnique({
+			where: { clerkUserId: clerkUser.id },
+		});
+
+		if (!dbUser) {
+			return { error: "Usuário não encontrado no banco de dados" };
+		}
+
+		let shiftId = data.shiftId;
+
+		// Se não foi fornecido um ID de turno, buscar o turno atual/mais recente
+		if (!shiftId) {
+			const shiftResult = await getCurrentOrLatestShift();
+
+			// Se não encontrou nenhum turno, retornar erro
+			if (!shiftResult.shift) {
+				return { error: "Nenhum turno encontrado. Crie um turno primeiro." };
+			}
+
+			shiftId = shiftResult.shift.id;
+		}
+
+		// Verificar se o turno existe e pertence ao usuário
+		const shift = await prisma.shift.findFirst({
+			where: {
+				id: shiftId,
+				userId: dbUser.id,
+			},
+		});
+
+		if (!shift) {
+			return { error: "Turno não encontrado ou não pertence ao usuário." };
+		}
+
+		// Criar o registro de ganho
+		const shiftIncome = await prisma.shiftIncome.create({
+			data: {
+				shiftId,
+				platform: data.platform === "TIPS" ? "TIPS" : data.platform,
+				amount: data.amount,
+				tripCount: data.tripCount,
+				description: data.description,
+				isExtendedHour: false,
+			},
+		});
+
+		// Atualizar os campos de ganhos do turno
+		const updatedFields: Record<string, any> = {};
+
+		if (data.platform === "UBER") {
+			updatedFields.uberEarnings = shift.uberEarnings + data.amount;
+		} else if (data.platform === "BOLT") {
+			updatedFields.boltEarnings = shift.boltEarnings + data.amount;
+		} else if (data.platform === "TIPS") {
+			updatedFields.otherEarnings = (shift.otherEarnings || 0) + data.amount;
+		}
+
+		// Calcular o total de ganhos
+		const totalEarnings =
+			(updatedFields.uberEarnings !== undefined ? updatedFields.uberEarnings : shift.uberEarnings) +
+			(updatedFields.boltEarnings !== undefined ? updatedFields.boltEarnings : shift.boltEarnings) +
+			(updatedFields.otherEarnings !== undefined ? updatedFields.otherEarnings : shift.otherEarnings || 0);
+
+		updatedFields.totalEarnings = totalEarnings;
+
+		// Atualizar o turno
+		await prisma.shift.update({
+			where: { id: shiftId },
+			data: updatedFields,
+		});
+
+		// Revalidar caminhos
+		revalidatePath("/dashboard/shifts");
+		revalidatePath("/");
+
+		return {
+			success: true,
+			shiftIncome,
+			message: `Ganho de ${data.amount.toLocaleString("pt-PT", { style: "currency", currency: "EUR" })} adicionado com sucesso!`,
+		};
+	} catch (error) {
+		console.error("Erro ao adicionar ganhos ao turno:", error);
+		return { error: "Ocorreu um erro ao adicionar ganhos ao turno. Tente novamente." };
+	}
+}

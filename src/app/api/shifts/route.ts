@@ -1,4 +1,4 @@
-import { createShift } from "@/actions/shift-actions";
+import { createShift, getUserShifts } from "@/actions/shift-actions";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -22,5 +22,20 @@ export async function POST(req: NextRequest) {
 	} catch (error) {
 		console.error("Erro ao processar requisição:", error);
 		return NextResponse.json({ error: "Erro ao processar a requisição" }, { status: 500 });
+	}
+}
+
+export async function GET(request: NextRequest) {
+	try {
+		const shifts = await getUserShifts();
+
+		if ("error" in shifts) {
+			return NextResponse.json({ error: shifts.error }, { status: 400 });
+		}
+
+		return NextResponse.json(shifts);
+	} catch (error) {
+		console.error("Erro ao buscar turnos:", error);
+		return NextResponse.json({ error: "Erro ao buscar turnos" }, { status: 500 });
 	}
 }
