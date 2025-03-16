@@ -180,67 +180,6 @@ export default function NewFuelRecordPage() {
 
 	return (
 		<div className="container py-12 space-y-6">
-			{/* Botão de teste */}
-			<Card className="border-none shadow-none p-0 mb-4">
-				<CardHeader>
-					<CardTitle>Teste de Funcionalidade</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<Button
-						onClick={() => {
-							console.log("Botão de teste clicado!");
-
-							// Testar se a função createFuelRecord está funcionando
-							const testData = {
-								odometer: 1000,
-								amount: 50,
-								price: 1.5,
-								totalCost: 75,
-								fullTank: true,
-								notes: "Teste",
-								vehicleId: vehicles[0]?.id || "",
-								shiftId: shifts[0]?.id || "",
-								chargingMethod: "volume" as const,
-							};
-
-							console.log("Dados de teste:", JSON.stringify(testData, null, 2));
-
-							// Verificar se os IDs são válidos
-							if (!testData.vehicleId) {
-								console.error("Nenhum veículo disponível para teste");
-								toast.error("Nenhum veículo disponível para teste");
-								return;
-							}
-
-							if (!testData.shiftId) {
-								console.error("Nenhum turno disponível para teste");
-								toast.error("Nenhum turno disponível para teste");
-								return;
-							}
-
-							// Chamar a função diretamente
-							createFuelRecord(testData)
-								.then((result) => {
-									console.log("Resultado do teste:", JSON.stringify(result, null, 2));
-									if (result && "success" in result) {
-										toast.success("Teste bem-sucedido!");
-									} else {
-										toast.error(result?.error || "Erro no teste");
-									}
-								})
-								.catch((error) => {
-									console.error("Erro no teste:", error);
-									toast.error("Erro ao executar o teste");
-								});
-						}}
-						className="w-full"
-						variant="outline"
-					>
-						Testar Criação de Registro (Bypass Formulário)
-					</Button>
-				</CardContent>
-			</Card>
-
 			<Card className="border-none shadow-none p-0">
 				<CardHeader>
 					<CardTitle>Novo Registro de Combustível</CardTitle>
@@ -251,11 +190,12 @@ export default function NewFuelRecordPage() {
 				<CardContent>
 					<Form {...form}>
 						<form
-							onSubmit={form.handleSubmit((data) => {
-								console.log("Form handleSubmit chamado com sucesso!");
-								onSubmit(data);
-							})}
 							className="space-y-2"
+							onSubmit={(e) => {
+								// Prevenir o comportamento padrão do formulário
+								e.preventDefault();
+								console.log("Formulário submetido");
+							}}
 						>
 							<div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-6">
 								{/* Veículo */}
@@ -512,59 +452,51 @@ export default function NewFuelRecordPage() {
 								/>
 							</div>
 
-							<div className="flex flex-col gap-4">
-								<Button type="submit" className="w-full">
-									{isSubmitting ? (
-										<>
-											<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-											Registrando...
-										</>
-									) : (
-										"Registrar Abastecimento"
-									)}
-								</Button>
+							<Button
+								type="button"
+								className="w-full"
+								onClick={() => {
+									// Obter valores atuais do formulário
+									const formValues = form.getValues();
+									console.log("Valores do formulário:", JSON.stringify(formValues, null, 2));
 
-								<Button
-									type="button"
-									variant="secondary"
-									className="w-full"
-									onClick={() => {
-										console.log("Botão alternativo clicado!");
-										// Obter valores atuais do formulário
-										const formValues = form.getValues();
-										console.log("Valores do formulário:", JSON.stringify(formValues, null, 2));
+									// Verificar erros
+									const formState = form.formState;
+									console.log(
+										"Estado do formulário:",
+										JSON.stringify(
+											{
+												isDirty: formState.isDirty,
+												isValid: formState.isValid,
+												errors: formState.errors,
+											},
+											null,
+											2,
+										),
+									);
 
-										// Verificar erros
-										const formState = form.formState;
-										console.log(
-											"Estado do formulário:",
-											JSON.stringify(
-												{
-													isDirty: formState.isDirty,
-													isValid: formState.isValid,
-													errors: formState.errors,
-												},
-												null,
-												2,
-											),
-										);
+									// Se houver erros, mostrar toast
+									if (Object.keys(formState.errors).length > 0) {
+										const errorMessages = Object.entries(formState.errors)
+											.map(([field, error]) => `${field}: ${error.message}`)
+											.join(", ");
+										toast.error(`Erros no formulário: ${errorMessages}`);
+										return;
+									}
 
-										// Se houver erros, mostrar toast
-										if (Object.keys(formState.errors).length > 0) {
-											const errorMessages = Object.entries(formState.errors)
-												.map(([field, error]) => `${field}: ${error.message}`)
-												.join(", ");
-											toast.error(`Erros no formulário: ${errorMessages}`);
-											return;
-										}
-
-										// Chamar onSubmit diretamente
-										onSubmit(formValues);
-									}}
-								>
-									Registrar (Método Alternativo)
-								</Button>
-							</div>
+									// Chamar onSubmit diretamente
+									onSubmit(formValues);
+								}}
+							>
+								{isSubmitting ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										Registrando...
+									</>
+								) : (
+									"Registrar Abastecimento"
+								)}
+							</Button>
 						</form>
 					</Form>
 				</CardContent>
